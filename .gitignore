@@ -1,0 +1,7 @@
+# Only the dashboard is published. Everything else in this folder (floor plans,
+# apartment-planner, personal data) stays local.
+*
+!.gitignore
+!index.html
+!CLAUDE.md
+!README.md

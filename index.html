@@ -1,0 +1,3528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pip-Boy">
+<title>Pip-Boy Dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin=""/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --pip-green: #14fe17;
+    --pip-green-dim: #0a8f0c;
+    --pip-green-dark: #063b07;
+    --pip-green-glow: rgba(20, 254, 23, 0.15);
+    --pip-bg: #0a0a0a;
+    --pip-panel: rgba(20, 254, 23, 0.05);
+    --pip-border: rgba(20, 254, 23, 0.3);
+    --pip-amber: #fe9a14;
+    --pip-amber-dim: #a06510;
+    --pip-red: #fe1414;
+    --pip-red-dim: #a01010;
+    --pip-cyan: #14fefe;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Share Tech Mono', monospace;
+    background: var(--pip-bg);
+    color: var(--pip-green);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    box-shadow: inset 0 0 120px rgba(20, 254, 23, 0.08);
+    pointer-events: none;
+    z-index: 9998;
+  }
+
+  .terminal-container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+
+  .terminal-header {
+    border-bottom: 2px solid var(--pip-green);
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .terminal-header h1 {
+    font-size: 20px;
+    font-weight: normal;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px var(--pip-green-glow);
+    animation: flicker 4s infinite;
+  }
+
+  @keyframes flicker {
+    0%, 95%, 100% { opacity: 1; }
+    96% { opacity: 0.8; }
+    97% { opacity: 1; }
+    98% { opacity: 0.7; }
+  }
+
+  .header-right { text-align: right; }
+
+  .oslo-clock {
+    font-size: 20px;
+    color: var(--pip-green);
+    text-shadow: 0 0 10px var(--pip-green-glow);
+    letter-spacing: 2px;
+  }
+
+  .date-display {
+    font-size: 12px;
+    color: var(--pip-green-dim);
+    margin-top: 2px;
+  }
+
+  .pip-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--pip-border);
+    overflow-x: auto;
+  }
+
+  .pip-tab {
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: transparent;
+    color: var(--pip-green-dim);
+    border: 1px solid transparent;
+    border-bottom: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    top: 1px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .pip-tab:hover { color: var(--pip-green); text-shadow: 0 0 8px var(--pip-green-glow); }
+
+  .pip-tab.active {
+    color: var(--pip-green);
+    border-color: var(--pip-border);
+    background: var(--pip-panel);
+    text-shadow: 0 0 10px var(--pip-green-glow);
+  }
+
+  .time-range-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+
+  .range-btn {
+    padding: 4px 12px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 1px;
+    background: transparent;
+    color: var(--pip-green-dim);
+    border: 1px solid var(--pip-border);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .range-btn:hover { color: var(--pip-green); background: var(--pip-panel); }
+  .range-btn.active { color: var(--pip-bg); background: var(--pip-green); border-color: var(--pip-green); }
+
+  .panel {
+    border: 1px solid var(--pip-border);
+    padding: 14px;
+    margin-bottom: 14px;
+    background: var(--pip-panel);
+  }
+
+  .panel-title {
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--pip-green);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--pip-green-dark);
+    text-shadow: 0 0 6px var(--pip-green-glow);
+  }
+
+  .input-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
+
+  .input-group { display: flex; flex-direction: column; gap: 2px; }
+
+  .input-group label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--pip-green-dim);
+  }
+
+  .pip-input {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 5px 8px;
+    background: rgba(20, 254, 23, 0.05);
+    border: 1px solid var(--pip-border);
+    color: var(--pip-green);
+    outline: none;
+    width: 130px;
+  }
+
+  .pip-input:focus { border-color: var(--pip-green); box-shadow: 0 0 8px var(--pip-green-glow); }
+  .pip-input::placeholder { color: var(--pip-green-dark); }
+  .pip-input.wide { width: 300px; }
+  .pip-input.med { width: 200px; }
+  input[type="date"].pip-input, input[type="time"].pip-input { width: 150px; }
+  input[type="date"].pip-input::-webkit-calendar-picker-indicator,
+  input[type="time"].pip-input::-webkit-calendar-picker-indicator {
+    filter: invert(65%) sepia(100%) saturate(500%) hue-rotate(85deg);
+  }
+
+  select.pip-input {
+    width: auto;
+    min-width: 120px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%230a8f0c'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 24px;
+  }
+
+  select.pip-input option { background: var(--pip-bg); color: var(--pip-green); }
+
+  .pip-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--pip-green-dim);
+    text-transform: uppercase;
+    align-self: flex-end;
+    padding-bottom: 5px;
+  }
+
+  .pip-checkbox input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--pip-border);
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .pip-checkbox input[type="checkbox"]:checked {
+    background: var(--pip-green);
+    border-color: var(--pip-green);
+  }
+
+  .pip-checkbox input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 5px;
+    width: 4px; height: 8px;
+    border: solid var(--pip-bg);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .pip-btn {
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    background: transparent;
+    color: var(--pip-green);
+    border: 1px solid var(--pip-green);
+    cursor: pointer;
+    transition: all 0.15s;
+    align-self: flex-end;
+  }
+
+  .pip-btn:hover { background: var(--pip-green); color: var(--pip-bg); }
+  .pip-btn.sm { padding: 3px 10px; font-size: 10px; letter-spacing: 1px; }
+  .pip-btn.danger { color: var(--pip-red); border-color: var(--pip-red); }
+  .pip-btn.danger:hover { background: var(--pip-red); color: var(--pip-bg); }
+  .pip-btn.amber { color: var(--pip-amber); border-color: var(--pip-amber); }
+  .pip-btn.amber:hover { background: var(--pip-amber); color: var(--pip-bg); }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .stat-box { border: 1px solid var(--pip-green-dark); padding: 10px; text-align: center; }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--pip-green-dim);
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    color: var(--pip-green);
+    text-shadow: 0 0 12px var(--pip-green-glow);
+  }
+
+  .stat-value.sm { font-size: 17px; }
+  .stat-unit { font-size: 10px; color: var(--pip-green-dim); margin-left: 2px; }
+
+  .log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+  .log-table th {
+    text-align: left;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--pip-green-dim);
+    padding: 5px 6px;
+    border-bottom: 1px solid var(--pip-border);
+    font-weight: normal;
+  }
+
+  .log-table td {
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--pip-green-dark);
+    color: var(--pip-green);
+    vertical-align: top;
+  }
+
+  .log-table tr:hover td { background: var(--pip-panel); }
+
+  .log-table .act-btn {
+    background: none;
+    border: none;
+    color: var(--pip-green-dark);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 1px 4px;
+  }
+
+  .log-table .act-btn:hover { color: var(--pip-green); }
+  .log-table .act-btn.del:hover { color: var(--pip-red); }
+
+  .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 100px; border-bottom: 1px solid var(--pip-green-dark); margin-bottom: 4px; }
+  .bar-chart .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+  .bar-chart .bar { width: 100%; max-width: 36px; background: var(--pip-green); opacity: 0.7; min-height: 2px; box-shadow: 0 0 6px var(--pip-green-glow); }
+  .bar-chart .bar:hover { opacity: 1; }
+  .bar-labels { display: flex; gap: 4px; }
+  .bar-labels span { flex: 1; text-align: center; font-size: 8px; color: var(--pip-green-dim); padding-top: 2px; }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .empty-state {
+    text-align: center;
+    padding: 20px;
+    color: var(--pip-green-dark);
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  .pri-urgent { color: var(--pip-red) !important; text-shadow: 0 0 8px rgba(254,20,20,0.3); }
+  .pri-high { color: var(--pip-amber) !important; text-shadow: 0 0 8px rgba(254,154,20,0.2); }
+  .pri-normal { color: var(--pip-green) !important; }
+  .pri-low { color: var(--pip-green-dim) !important; }
+
+  .status-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    font-size: 9px;
+    letter-spacing: 1px;
+    border: 1px solid;
+    text-transform: uppercase;
+  }
+
+  .status-active { color: var(--pip-green); border-color: var(--pip-green-dim); }
+  .status-in_progress { color: var(--pip-amber); border-color: var(--pip-amber-dim); }
+  .status-finished { color: var(--pip-green-dim); border-color: var(--pip-green-dark); }
+  .status-discarded { color: var(--pip-red-dim); border-color: var(--pip-red-dim); text-decoration: line-through; }
+
+  .deadline-card {
+    border: 1px solid var(--pip-border);
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    background: var(--pip-panel);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .deadline-card.urgent-glow {
+    border-color: rgba(254, 20, 20, 0.5);
+    box-shadow: inset 0 0 20px rgba(254, 20, 20, 0.05);
+  }
+
+  .deadline-card.high-glow { border-color: rgba(254, 154, 20, 0.4); }
+
+  .dl-info { flex: 1; min-width: 200px; }
+
+  .dl-title { font-size: 14px; letter-spacing: 1px; margin-bottom: 4px; }
+
+  .dl-meta { font-size: 10px; color: var(--pip-green-dim); letter-spacing: 1px; }
+
+  .dl-countdown { font-size: 22px; text-align: right; min-width: 120px; }
+
+  .dl-countdown .cd-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--pip-green-dim);
+    text-transform: uppercase;
+  }
+
+  .goal-box {
+    border: 1px solid var(--pip-border);
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  .goal-text {
+    font-size: 14px;
+    color: var(--pip-green);
+    text-shadow: 0 0 6px var(--pip-green-glow);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+
+  .goal-task-item {
+    font-size: 12px;
+    padding: 3px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .goal-task-item .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .dot-active { background: var(--pip-green); }
+  .dot-in_progress { background: var(--pip-amber); }
+  .dot-finished { background: var(--pip-green-dim); }
+  .dot-discarded { background: var(--pip-red-dim); }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--pip-green-dark);
+    border: 1px solid var(--pip-green);
+    color: var(--pip-green);
+    padding: 8px 16px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 1px;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  .toast.show { opacity: 1; }
+
+  .map-wrap { width: 100%; height: 480px; position: relative; border: 1px solid var(--pip-green-dark); }
+
+  /* MapLibre container */
+  .maplibregl-map { font-family: 'Share Tech Mono', monospace !important; }
+
+  /* Zoom controls */
+  .maplibregl-ctrl-group { background: var(--pip-bg) !important; border: 1px solid var(--pip-border) !important; border-radius: 0 !important; box-shadow: none !important; }
+  .maplibregl-ctrl-group button { width: 30px !important; height: 30px !important; }
+  .maplibregl-ctrl-group button + button { border-top: 1px solid var(--pip-border) !important; }
+  .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: hue-rotate(85deg) saturate(500%) brightness(1.5); }
+
+  /* Attribution */
+  .maplibregl-ctrl-attrib { background: rgba(10,10,10,0.8) !important; color: var(--pip-green-dark) !important; font-size: 8px !important; }
+  .maplibregl-ctrl-attrib a { color: var(--pip-green-dim) !important; }
+  .maplibregl-ctrl-attrib-button { filter: hue-rotate(85deg) saturate(500%) brightness(1.2); }
+
+  /* Popups */
+  .maplibregl-popup-content {
+    background: var(--pip-bg) !important;
+    border: 1px solid var(--pip-green) !important;
+    box-shadow: 0 0 12px var(--pip-green-glow) !important;
+    border-radius: 0 !important;
+    color: var(--pip-green) !important;
+    font-family: 'Share Tech Mono', monospace !important;
+    font-size: 11px !important;
+    padding: 8px 10px 8px 10px !important;
+  }
+  .maplibregl-popup-tip { border-top-color: var(--pip-bg) !important; }
+  .maplibregl-popup-close-button { color: var(--pip-green-dim) !important; font-size: 18px !important; right: 4px !important; top: 2px !important; }
+  .maplibregl-popup-close-button:hover { color: var(--pip-green) !important; background: none !important; }
+
+  /* Custom markers */
+  .pip-marker {
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    border: 2px solid;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; font-weight: bold;
+    color: var(--pip-bg);
+    text-shadow: none;
+    cursor: pointer;
+  }
+  .pip-marker-green { background: var(--pip-green); border-color: var(--pip-green); box-shadow: 0 0 10px rgba(20,254,23,0.5); }
+  .pip-marker-amber { background: var(--pip-amber); border-color: var(--pip-amber); box-shadow: 0 0 10px rgba(254,154,20,0.5); }
+  .pip-marker-red { background: var(--pip-red); border-color: var(--pip-red); box-shadow: 0 0 10px rgba(254,20,20,0.5); }
+  .pip-marker-dim { background: var(--pip-green-dim); border-color: var(--pip-green-dim); box-shadow: 0 0 6px rgba(10,143,12,0.3); }
+  .pip-marker-pulse { animation: markerPulse 2s ease-in-out infinite; }
+  @keyframes markerPulse { 0%,100% { box-shadow: 0 0 8px currentColor; } 50% { box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; } }
+
+  .popup-loc { font-size: 10px; color: var(--pip-green-dim); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid var(--pip-green-dark); padding-bottom: 3px; }
+  .popup-task { padding: 3px 0; display: flex; align-items: center; gap: 6px; }
+  .popup-task .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+  .map-legend { margin-top: 10px; font-size: 9px; color: var(--pip-green-dim); letter-spacing: 1px; display: flex; flex-wrap: wrap; gap: 4px 0; }
+  .map-legend-item { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
+  .map-legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .map-legend-line { width: 16px; height: 0; display: inline-block; border-top: 3px solid; }
+
+  /* API key prompt */
+  .map-key-prompt {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--pip-bg); z-index: 10; padding: 20px; text-align: center;
+  }
+  .map-key-prompt p { margin: 8px 0; font-size: 11px; color: var(--pip-green-dim); letter-spacing: 1px; max-width: 420px; }
+  .map-key-prompt a { color: var(--pip-green); }
+
+  /* ==================== HEADER ==================== */
+  .terminal-header { align-items: flex-end; }
+  .header-left .oslo-clock { font-size: 26px; }
+  .header-left .date-display { font-size: 13px; }
+  .header-right { font-size: 10px; color: var(--pip-green-dim); letter-spacing: 1px; }
+
+  /* ==================== FORMS: one field per row, top to bottom ==================== */
+  .input-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .input-row > .pip-btn, .input-row > .pip-checkbox, .input-row > label.pip-btn { align-self: flex-start; }
+  .input-row .pip-input, .input-row .pip-input.wide, .input-row .pip-input.med,
+  .input-row input[type="date"].pip-input, .input-row input[type="time"].pip-input,
+  .input-row select.pip-input { width: 100%; max-width: 520px; }
+  .addr-wrap { max-width: 520px; }
+  .addr-wrap .pip-input { flex: 1; min-width: 0; }
+  textarea.pip-input { resize: vertical; min-height: 64px; line-height: 1.4; }
+  .form-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .link-btn { background: none; border: none; color: var(--pip-green-dim); font-family: inherit; font-size: 11px; letter-spacing: 1px; cursor: pointer; padding: 2px 0; text-align: left; align-self: flex-start; }
+  .link-btn:hover { color: var(--pip-green); }
+  .field-help { font-size: 10px; color: var(--pip-green-dim); letter-spacing: 1px; line-height: 1.5; max-width: 560px; }
+  .field-help a { color: var(--pip-green); }
+
+  /* Deadline quick-pick chips */
+  .dl-chips { display: flex; flex-wrap: wrap; gap: 6px; max-width: 560px; }
+  .dl-chip { font-family: inherit; font-size: 11px; padding: 4px 8px; background: transparent; border: 1px solid var(--pip-border); color: var(--pip-green); cursor: pointer; text-align: left; }
+  .dl-chip small { display: block; font-size: 9px; color: var(--pip-green-dim); letter-spacing: 1px; }
+  .dl-chip.sel { border-color: var(--pip-green); background: var(--pip-panel); box-shadow: inset 0 0 0 1px var(--pip-green); }
+  .dl-chip.pri-urgent-b { border-left: 3px solid var(--pip-red); }
+  .dl-chip.pri-high-b { border-left: 3px solid var(--pip-amber); }
+  .quick-dl { border: 1px dashed var(--pip-border); padding: 10px; display: none; flex-direction: column; gap: 8px; max-width: 520px; }
+  .quick-dl.open { display: flex; }
+
+  /* Subtask (step) editor */
+  .step-edit { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 3px 0; max-width: 520px; }
+  .step-edit span { flex: 1; }
+
+  /* ==================== TASK LIST (grouped) ==================== */
+  .task-group { margin-bottom: 12px; }
+  .task-group-head { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--pip-green-dim); padding: 6px 0; border-bottom: 1px solid var(--pip-border); cursor: pointer; user-select: none; }
+  .task-group-head .cnt { font-size: 10px; color: var(--pip-green-dark); }
+  .task-group-head .grow { flex: 1; }
+  .task-group.important .task-group-head { color: var(--pip-amber); }
+  .act-btn { background: none; border: none; color: var(--pip-green-dark); font-family: inherit; font-size: 11px; cursor: pointer; padding: 1px 4px; text-decoration: none; }
+  .act-btn:hover { color: var(--pip-green); }
+  .act-btn.del:hover { color: var(--pip-red); }
+  .task-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 8px; padding: 7px 0; border-bottom: 1px solid var(--pip-green-dark); }
+  .task-row .task-main { flex: 1 1 220px; }
+  .task-row .task-actions { margin-left: auto; }
+  .task-row:hover { background: var(--pip-panel); }
+  .star-btn { background: none; border: none; font-size: 15px; line-height: 1; cursor: pointer; color: var(--pip-green-dark); padding: 1px 2px; }
+  .star-btn.on { color: var(--pip-amber); }
+  .task-main { flex: 1; min-width: 0; cursor: pointer; }
+  .task-title { font-size: 13px; letter-spacing: 0.5px; word-break: break-word; }
+  .task-meta { font-size: 10px; color: var(--pip-green-dim); letter-spacing: 1px; margin-top: 2px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .task-actions { display: flex; gap: 3px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+  .task-actions .act-btn { background: none; border: none; color: var(--pip-green-dark); font-family: inherit; font-size: 11px; cursor: pointer; padding: 1px 4px; }
+  .task-actions .act-btn:hover { color: var(--pip-green); }
+  .task-actions .act-btn.del:hover { color: var(--pip-red); }
+  .task-details { padding: 6px 0 10px 30px; border-bottom: 1px solid var(--pip-green-dark); font-size: 12px; }
+  .task-desc { white-space: pre-wrap; color: var(--pip-green); margin-bottom: 6px; line-height: 1.45; }
+  .task-step { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+  .task-step.done span { text-decoration: line-through; color: var(--pip-green-dim); }
+  .task-step input { accent-color: var(--pip-green); }
+  .task-done .task-title { text-decoration: line-through; color: var(--pip-green-dim); }
+  .group-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+
+  /* ==================== CALENDAR ==================== */
+  .cal-toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+  .cal-title { font-size: 15px; letter-spacing: 2px; text-transform: uppercase; min-width: 170px; text-align: center; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-dow { font-size: 9px; letter-spacing: 2px; color: var(--pip-green-dim); text-align: center; padding: 3px 0; text-transform: uppercase; }
+  .cal-cell { min-height: 84px; border: 1px solid var(--pip-green-dark); padding: 3px; cursor: pointer; overflow: hidden; font-size: 10px; }
+  .cal-cell:hover { background: var(--pip-panel); }
+  .cal-cell.other { opacity: 0.4; }
+  .cal-cell.today { border-color: var(--pip-green); box-shadow: inset 0 0 0 1px var(--pip-green); }
+  .cal-cell.sel { background: var(--pip-panel); }
+  .cal-num { font-size: 11px; color: var(--pip-green-dim); margin-bottom: 2px; }
+  .cal-cell.today .cal-num { color: var(--pip-green); font-weight: bold; }
+  .cal-item { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 1px 3px; margin-bottom: 1px; border-left: 2px solid var(--pip-green); }
+  .cal-item.k-dl { border-left-color: var(--pip-amber); }
+  .cal-item.k-dl.pri-urgent-b { border-left-color: var(--pip-red); }
+  .cal-item.k-g { border-left-color: var(--pip-cyan); color: var(--pip-green-dim); }
+  .cal-more { color: var(--pip-green-dim); padding-left: 3px; }
+  .cal-dots { display: none; gap: 2px; flex-wrap: wrap; }
+  .cal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pip-green); }
+  .cal-dot.k-dl { background: var(--pip-amber); } .cal-dot.k-g { background: var(--pip-cyan); }
+  .cal-day-item { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--pip-green-dark); font-size: 12px; }
+  .cal-day-item .when { width: 48px; flex-shrink: 0; color: var(--pip-green-dim); font-size: 11px; }
+  .cal-day-item .what { flex: 1; min-width: 0; }
+  .cal-day-item .kind { font-size: 9px; letter-spacing: 1px; color: var(--pip-green-dim); text-transform: uppercase; }
+  .cal-agenda-day { font-size: 11px; letter-spacing: 2px; color: var(--pip-green-dim); text-transform: uppercase; margin: 10px 0 2px; }
+  body[data-theme="standard"] .cal-item.k-g { border-left-color: #1a73e8; }
+  body[data-theme="standard"] .cal-dot.k-g { background: #1a73e8; }
+  body[data-theme="standard"] .cal-cell { border-radius: 4px; }
+
+  /* Connections / sync */
+  .conn-block { border-top: 1px solid var(--pip-green-dark); padding-top: 10px; margin-top: 10px; }
+  .conn-status { font-size: 11px; color: var(--pip-green-dim); letter-spacing: 1px; margin: 4px 0; }
+  .conn-status.ok { color: var(--pip-green); }
+
+  /* ==================== SUB-TABS ==================== */
+  .sub-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .sub-section { display: none; }
+  .sub-section.active { display: block; }
+
+  /* ==================== MAP DISPLAY CONTROLS ==================== */
+  .map-wrap .maplibregl-canvas { filter: brightness(var(--map-brightness, 1)); }
+  .map-controls { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px; }
+  .map-controls input[type="range"] { width: 160px; accent-color: var(--pip-green); }
+  .map-controls .range-val { font-size: 11px; color: var(--pip-green-dim); min-width: 36px; display: inline-block; }
+  .pip-marker-addr { border-radius: 4px; }
+
+  .pip-marker-place {
+    width: 18px; height: 18px; font-size: 11px; border-radius: 50%;
+    background: var(--pip-bg); color: var(--pip-cyan); border: 1px solid var(--pip-cyan); box-shadow: 0 0 6px rgba(20,254,254,0.4);
+  }
+  body[data-theme="standard"] .pip-marker-place { color: #1a73e8; border-color: #1a73e8; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+  /* ==================== TRAVEL PLANNER ==================== */
+  .travel-note { font-size: 10px; color: var(--pip-green-dim); letter-spacing: 1px; line-height: 1.5; }
+  .travel-card { border: 1px solid var(--pip-border); background: var(--pip-panel); padding: 10px 14px; margin-bottom: 10px; }
+  .travel-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+  .travel-title { font-size: 14px; letter-spacing: 1px; }
+  .travel-route { font-size: 10px; color: var(--pip-green-dim); letter-spacing: 1px; margin: 2px 0 8px; }
+  .travel-row { display: flex; gap: 10px; font-size: 12px; padding: 3px 0; border-top: 1px solid var(--pip-green-dark); }
+  .travel-mode { width: 78px; flex-shrink: 0; font-size: 9px; letter-spacing: 2px; color: var(--pip-green-dim); padding-top: 2px; text-transform: uppercase; }
+  .travel-opts div { padding: 1px 0; }
+  .travel-sit { color: var(--pip-amber); font-size: 11px; margin-top: 2px; }
+  .travel-sit small { display: block; color: var(--pip-green-dim); font-size: 10px; }
+  .travel-links { font-size: 10px; letter-spacing: 1px; margin-top: 6px; }
+  .travel-links a { color: var(--pip-green-dim); margin-right: 10px; }
+  .wx-warn { color: var(--pip-amber); font-size: 12px; white-space: nowrap; }
+  .wx-rain { color: var(--pip-cyan); font-size: 12px; white-space: nowrap; }
+  body[data-theme="standard"] .wx-rain { color: #1a73e8; }
+  body[data-theme="standard"] .travel-card { border-radius: 8px; }
+
+  /* ==================== ADDRESS PICKER ==================== */
+  .addr-group { position: relative; }
+  .addr-wrap { display: flex; gap: 4px; }
+  .addr-results {
+    display: none; position: absolute; top: 100%; left: 0; z-index: 50;
+    min-width: 300px; max-width: 440px; margin-top: 2px;
+    background: var(--pip-bg); border: 1px solid var(--pip-border);
+  }
+  .addr-results.open { display: block; }
+  .addr-results button {
+    display: block; width: 100%; text-align: left; padding: 6px 8px;
+    font-family: inherit; font-size: 11px; color: var(--pip-green);
+    background: transparent; border: none; border-bottom: 1px solid var(--pip-green-dark); cursor: pointer;
+  }
+  .addr-results button:hover { background: var(--pip-panel); }
+  .addr-results .addr-none { padding: 6px 8px; font-size: 11px; color: var(--pip-green-dim); }
+  .addr-picked { font-size: 10px; color: var(--pip-green-dim); letter-spacing: 1px; margin-top: 3px; min-height: 12px; }
+  .addr-picked button { background: none; border: none; color: var(--pip-red); font-family: inherit; font-size: 10px; cursor: pointer; }
+  body[data-theme="standard"] .map-controls input[type="range"] { accent-color: var(--std-accent); }
+
+  /* ==================== DISPLAY CONTROLS (theme + brightness) ==================== */
+  body { padding-top: 38px; }
+  .display-controls {
+    position: fixed; top: 8px; left: 8px; z-index: 10001;
+    display: flex; gap: 4px; align-items: center;
+  }
+  .display-controls .range-btn { background: var(--pip-bg); padding: 3px 9px; font-size: 10px; }
+  .display-controls .range-btn.active { background: var(--pip-green); }
+  .display-controls .sep { width: 6px; }
+
+  /* ==================== BRIGHTNESS: FALLOUT ==================== */
+  body[data-theme="fallout"][data-brightness="medium"] {
+    --pip-bg: #172017;
+    --pip-panel: rgba(20, 254, 23, 0.07);
+    --pip-border: rgba(20, 254, 23, 0.4);
+    --pip-green-dim: #1fa822;
+    --pip-green-dark: #0e5c10;
+  }
+  body[data-theme="fallout"][data-brightness="light"] {
+    --pip-bg: #253325;
+    --pip-panel: rgba(20, 254, 23, 0.09);
+    --pip-border: rgba(20, 254, 23, 0.45);
+    --pip-green-dim: #3cc23f;
+    --pip-green-dark: #1a7a1c;
+  }
+
+  /* ==================== STANDARD THEME ==================== */
+  /* Light, warm "map paper" palette (Google Maps-like). Brightness steps go bright grey -> warm white. */
+  body[data-theme="standard"] {
+    --pip-green: #202124;
+    --pip-green-dim: #5f6368;
+    --pip-green-dark: #a8a49d;
+    --pip-green-glow: transparent;
+    --pip-bg: #e3e0da;
+    --pip-panel: rgba(255, 255, 255, 0.55);
+    --pip-border: rgba(0, 0, 0, 0.13);
+    --pip-amber: #d56e00;
+    --pip-amber-dim: #b3752e;
+    --pip-red: #d93025;
+    --pip-red-dim: #b0605a;
+    --std-accent: #188038;
+    --std-accent-dim: #6a9c78;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  body[data-theme="standard"][data-brightness="medium"] {
+    --pip-bg: #edebe6;
+    --pip-panel: rgba(255, 255, 255, 0.65);
+  }
+  body[data-theme="standard"][data-brightness="light"] {
+    --pip-bg: #f7f5f1;
+    --pip-panel: rgba(255, 255, 255, 0.8);
+    --pip-border: rgba(0, 0, 0, 0.11);
+  }
+  body[data-theme="standard"] .pip-input { background: #fff; }
+  body[data-theme="standard"] input[type="date"].pip-input::-webkit-calendar-picker-indicator,
+  body[data-theme="standard"] input[type="time"].pip-input::-webkit-calendar-picker-indicator { filter: none; }
+  body[data-theme="standard"] .maplibregl-ctrl-group button .maplibregl-ctrl-icon,
+  body[data-theme="standard"] .maplibregl-ctrl-attrib-button { filter: none; }
+  body[data-theme="standard"] .maplibregl-ctrl-attrib { background: rgba(255,255,255,0.8) !important; }
+  body[data-theme="standard"] .pip-marker { color: #fff; }
+  body[data-theme="standard"]::before,
+  body[data-theme="standard"]::after { display: none; }
+  body[data-theme="standard"] .terminal-header h1 { animation: none; letter-spacing: 2px; font-weight: 600; }
+  body[data-theme="standard"] .panel,
+  body[data-theme="standard"] .deadline-card,
+  body[data-theme="standard"] .goal-box,
+  body[data-theme="standard"] .stat-box,
+  body[data-theme="standard"] .map-wrap { border-radius: 8px; }
+  body[data-theme="standard"] .pip-btn,
+  body[data-theme="standard"] .range-btn,
+  body[data-theme="standard"] .pip-input,
+  body[data-theme="standard"] .toast { border-radius: 6px; }
+  body[data-theme="standard"] .pip-tab { border-radius: 6px 6px 0 0; }
+  body[data-theme="standard"] .panel-title { letter-spacing: 1.5px; font-weight: 600; }
+  body[data-theme="standard"] .pip-btn:not(.danger):not(.amber) { color: var(--std-accent); border-color: var(--std-accent); }
+  body[data-theme="standard"] .pip-btn:not(.danger):not(.amber):hover { background: var(--std-accent); color: var(--pip-bg); }
+  body[data-theme="standard"] .range-btn.active { background: var(--std-accent); border-color: var(--std-accent); color: var(--pip-bg); }
+  body[data-theme="standard"] .pip-input:focus { border-color: var(--std-accent); }
+  body[data-theme="standard"] .pip-checkbox input[type="checkbox"]:checked { background: var(--std-accent); border-color: var(--std-accent); }
+  body[data-theme="standard"] .bar-chart .bar { background: var(--std-accent); box-shadow: none; }
+  body[data-theme="standard"] .pri-urgent,
+  body[data-theme="standard"] .pri-high { text-shadow: none; }
+  body[data-theme="standard"] .pri-normal { color: var(--std-accent) !important; }
+  body[data-theme="standard"] .pri-low { color: var(--std-accent-dim) !important; }
+  body[data-theme="standard"] .status-active { color: var(--std-accent); border-color: var(--std-accent-dim); }
+  body[data-theme="standard"] .status-badge { border-radius: 4px; }
+  body[data-theme="standard"] .dot-active { background: var(--std-accent); }
+  body[data-theme="standard"] .dot-finished { background: var(--std-accent-dim); }
+  body[data-theme="standard"] .pip-marker-green { background: var(--std-accent); border-color: var(--std-accent); }
+  body[data-theme="standard"] .pip-marker-dim { background: var(--std-accent-dim); border-color: var(--std-accent-dim); }
+  body[data-theme="standard"] .maplibregl-map,
+  body[data-theme="standard"] .maplibregl-popup-content,
+  body[data-theme="standard"] .pip-marker { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important; }
+  body[data-theme="standard"] .toast { background: var(--pip-bg); border-color: var(--std-accent); }
+
+  @media (max-width: 700px) {
+    .display-controls { gap: 2px; left: 4px; top: 6px; }
+    .display-controls .range-btn { padding: 3px 5px; font-size: 9px; letter-spacing: 0; }
+    .display-controls .sep { width: 3px; }
+    .pip-tabs { flex-wrap: wrap; overflow-x: visible; }
+    .cal-cell { min-height: 46px; }
+    .cal-item, .cal-more { display: none; }
+    .cal-dots { display: flex; }
+    .task-actions .pip-btn.sm { padding: 3px 6px; }
+    .terminal-container { padding: 8px; }
+    .pip-tab { padding: 5px 8px; font-size: 10px; letter-spacing: 1px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .pip-input { width: 110px; }
+    .pip-input.wide { width: 180px; }
+    .pip-input.med { width: 150px; }
+    .dl-countdown { font-size: 18px; min-width: 80px; }
+  }
+</style>
+</head>
+<body data-theme="fallout" data-brightness="dark">
+
+<div class="display-controls">
+  <button class="range-btn" id="themeToggle" onclick="toggleTheme()" title="Switch visual theme">Fallout</button>
+  <span class="sep"></span>
+  <button class="range-btn" data-bright="dark" onclick="setBrightness('dark')" title="Dark">Dark</button>
+  <button class="range-btn" data-bright="medium" onclick="setBrightness('medium')" title="Medium">Med</button>
+  <button class="range-btn" data-bright="light" onclick="setBrightness('light')" title="Light">Light</button>
+  <span class="sep"></span>
+  <button class="range-btn" data-lang="no" onclick="setLang('no')" title="Norsk">NO</button>
+  <button class="range-btn" data-lang="en" onclick="setLang('en')" title="English">EN</button>
+</div>
+
+<div class="terminal-container">
+  <div class="terminal-header">
+    <div class="header-left">
+      <div class="oslo-clock" id="osloClock">--:--</div>
+      <div class="date-display" id="currentDate"></div>
+    </div>
+    <div class="header-right" id="syncBadge"></div>
+  </div>
+
+  <div class="pip-tabs">
+    <button class="pip-tab active" data-section="home" onclick="switchSection('home')">Home</button>
+    <button class="pip-tab" data-section="calendar" onclick="switchSection('calendar')">Calendar</button>
+    <button class="pip-tab" data-section="deadlines" onclick="switchSection('deadlines')">Deadlines</button>
+    <button class="pip-tab" data-section="tasks" onclick="switchSection('tasks')">Tasks</button>
+    <button class="pip-tab" data-section="map" onclick="switchSection('map')">Map</button>
+    <button class="pip-tab" data-section="log" onclick="switchSection('log')">Log</button>
+  </div>
+
+  <!-- ==================== HOME ==================== -->
+  <div class="section active" id="section-home">
+    <div class="panel">
+      <div class="panel-title">// Goal of the Day</div>
+      <div id="goalDisplay"></div>
+      <div id="goalForm">
+        <div class="input-row">
+          <div class="input-group">
+            <label>Goal</label>
+            <input type="text" class="pip-input wide" id="goalText" placeholder="What's the mission today?" maxlength="120" onkeydown="if(event.key==='Enter')saveGoal()">
+          </div>
+          <button class="pip-btn sm" onclick="saveGoal()">Set Goal</button>
+        </div>
+        <div class="input-row" style="margin-top:4px;">
+          <div class="input-group">
+            <label>Link tasks (ctrl/cmd-click, max 3)</label>
+            <select class="pip-input med" id="goalTaskSelect" multiple style="height:60px; min-width:300px;"></select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">// Urgent Deadlines</div>
+      <div id="homeUrgentDeadlines"></div>
+      <div class="empty-state" id="homeUrgentEmpty">NO URGENT DEADLINES</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">// Rolling 7-Day Averages</div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-label">Avg Sleep</div><div class="stat-value" id="homeAvgSleep">--<span class="stat-unit">h</span></div></div>
+        <div class="stat-box"><div class="stat-label">Avg Bedtime</div><div class="stat-value sm" id="homeAvgBed">--:--</div></div>
+        <div class="stat-box"><div class="stat-label">Avg Wake</div><div class="stat-value sm" id="homeAvgWake">--:--</div></div>
+        <div class="stat-box"><div class="stat-label">Avg Screen</div><div class="stat-value" id="homeAvgScreen">--<span class="stat-unit">h</span></div></div>
+        <div class="stat-box"><div class="stat-label">Avg Social</div><div class="stat-value" id="homeAvgSocial">--<span class="stat-unit">h</span></div></div>
+        <div class="stat-box"><div class="stat-label">Tasks Done</div><div class="stat-value" id="homeTasksDone">--</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CALENDAR ==================== -->
+  <div class="section" id="section-calendar">
+    <div class="panel">
+      <div class="cal-toolbar">
+        <button class="range-btn" onclick="calMove(-1)">&lsaquo;</button>
+        <div class="cal-title" id="calTitle"></div>
+        <button class="range-btn" onclick="calMove(1)">&rsaquo;</button>
+        <button class="range-btn" onclick="calToday()">Today</button>
+        <span class="sep" style="width:8px"></span>
+        <button class="range-btn" data-calview="month" onclick="setCalView('month')">Month</button>
+        <button class="range-btn" data-calview="agenda" onclick="setCalView('agenda')">Agenda</button>
+        <span class="sep" style="width:8px"></span>
+        <button class="range-btn" id="gcalBtn" onclick="gcalConnect()">Connect Google</button>
+      </div>
+      <div class="conn-status" id="gcalStatus"></div>
+      <div id="calBody"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">// <span id="calDayTitle"></span></div>
+      <div id="calDayList"></div>
+    </div>
+  </div>
+
+  <!-- ==================== DEADLINES ==================== -->
+  <div class="section" id="section-deadlines">
+    <div class="panel">
+      <div class="panel-title">// <span id="dlFormTitle">Add Deadline</span></div>
+      <div class="input-row">
+        <div class="input-group"><label>Title</label><input type="text" class="pip-input wide" id="dlTitle" placeholder="Deadline name" maxlength="100"></div>
+        <div class="input-group"><label>Due Date (empty = not known yet)</label><input type="date" class="pip-input" id="dlDate"></div>
+        <div class="input-group"><label>Time (optional)</label><input type="time" class="pip-input" id="dlTime" value=""></div>
+        <div class="input-group">
+          <label>Priority</label>
+          <select class="pip-input" id="dlPriority">
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <button class="pip-btn" onclick="saveDeadline()">Save</button>
+        <button class="pip-btn sm" id="dlCancelBtn" style="display:none;" onclick="cancelEditDeadline()">Cancel</button>
+      </div>
+      <input type="hidden" id="dlEditId" value="">
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">// Active Deadlines</div>
+      <div id="deadlineList"></div>
+      <div class="empty-state" id="deadlineEmpty">NO DEADLINES SET</div>
+    </div>
+  </div>
+
+  <!-- ==================== TASKS ==================== -->
+  <div class="section" id="section-tasks">
+    <div class="sub-tabs" data-subtabs="tasks">
+      <button class="range-btn active" data-sub="all" onclick="switchSub('tasks','all')">All Tasks</button>
+      <button class="range-btn" data-sub="easy" onclick="switchSub('tasks','easy')">Easy-fix</button>
+      <button class="range-btn" data-sub="travel" onclick="switchSub('tasks','travel')">Reiseplan</button>
+    </div>
+
+    <div class="sub-section active" id="sub-tasks-all">
+      <div class="panel">
+        <div class="panel-title">// <span id="taskFormTitle">Add Task</span></div>
+        <div class="input-row">
+          <div class="input-group"><label>Title</label><input type="text" class="pip-input" id="taskText" placeholder="What needs doing?" maxlength="150"></div>
+          <div class="input-group"><label>Description</label><textarea class="pip-input" id="taskDesc" rows="3" maxlength="4000" placeholder="Details, notes, links"></textarea></div>
+          <div class="input-group"><label>Group</label><select class="pip-input" id="taskGroup" onchange="onGroupSelect(this)"></select></div>
+          <label class="pip-checkbox"><input type="checkbox" id="taskImportant"> &#9733; Important</label>
+          <div class="input-group">
+            <label>Deadline</label>
+            <div class="dl-chips" id="taskDlChips"></div>
+            <select class="pip-input" id="taskDeadline" onchange="renderDeadlineChips()"><option value="">None</option></select>
+            <button type="button" class="link-btn" onclick="toggleQuickDeadline()">+ New deadline</button>
+            <div class="quick-dl" id="quickDl">
+              <input type="text" class="pip-input" id="qdlTitle" placeholder="Deadline name" maxlength="100">
+              <input type="date" class="pip-input" id="qdlDate">
+              <select class="pip-input" id="qdlPriority">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+                <option value="low">Low</option>
+              </select>
+              <button type="button" class="pip-btn sm" onclick="createQuickDeadline()">Create deadline</button>
+            </div>
+          </div>
+          <div class="input-group"><label>Place / Area</label><select class="pip-input" id="taskLocation"><option value="">None</option></select></div>
+          <div class="input-group addr-group"><label>Address (optional)</label><div class="addr-wrap"><input type="text" class="pip-input" id="taskAddr" placeholder="Search address" maxlength="150" onkeydown="if(event.key==='Enter'){event.preventDefault();searchAddress('task')}"><button class="pip-btn sm" onclick="searchAddress('task')">Find</button></div><div class="addr-results" id="taskAddrResults"></div><div class="addr-picked" id="taskAddrPicked"></div></div>
+          <div class="input-group"><label>Date</label><input type="date" class="pip-input" id="taskWhenDate"></div>
+          <div class="input-group"><label>Time</label><input type="time" class="pip-input" id="taskWhenTime"></div>
+          <label class="pip-checkbox"><input type="checkbox" id="taskSub5"> Easy-fix</label>
+          <div class="input-group">
+            <label>Subtasks</label>
+            <div id="taskStepsEdit"></div>
+            <div class="addr-wrap"><input type="text" class="pip-input" id="taskStepInput" placeholder="Add a step" maxlength="150" onkeydown="if(event.key==='Enter'){event.preventDefault();addStepDraft()}"><button type="button" class="pip-btn sm" onclick="addStepDraft()">+</button></div>
+          </div>
+          <div class="form-actions">
+            <button class="pip-btn" onclick="saveTask()">Save</button>
+            <button class="pip-btn sm" id="taskCancelBtn" style="display:none;" onclick="cancelEditTask()">Cancel</button>
+          </div>
+        </div>
+        <input type="hidden" id="taskEditId" value="">
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">// All Tasks</div>
+        <div id="taskFilterBar" style="margin-bottom:8px; display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="range-btn" data-tf="all" onclick="setTaskFilter('all')">All</button>
+          <button class="range-btn active" data-tf="open" onclick="setTaskFilter('open')">Open</button>
+          <button class="range-btn" data-tf="in_progress" onclick="setTaskFilter('in_progress')">In Progress</button>
+          <button class="range-btn" data-tf="finished" onclick="setTaskFilter('finished')">Finished</button>
+          <button class="range-btn" data-tf="discarded" onclick="setTaskFilter('discarded')">Discarded</button>
+        </div>
+        <div class="group-filter" id="groupFilterBar"></div>
+        <div id="taskList"></div>
+        <div class="empty-state" id="taskEmpty">NO TASKS</div>
+      </div>
+    </div>
+
+    <div class="sub-section" id="sub-tasks-easy">
+      <div class="panel">
+        <div class="panel-title">// Easy-fix — Quick Tasks (Under 5 Min)</div>
+        <div class="input-row">
+          <div class="input-group"><label>Quick Task</label><input type="text" class="pip-input wide" id="sub5QuickText" placeholder="Quick thing to knock out" maxlength="150" onkeydown="if(event.key==='Enter')addQuickSub5()"></div>
+          <div class="input-group"><label>Deadline</label><select class="pip-input med" id="sub5Deadline"><option value="">None</option></select></div>
+          <div class="input-group"><label>Place / Area</label><select class="pip-input" id="sub5Location"><option value="">None</option></select></div>
+          <div class="input-group addr-group"><label>Address (optional)</label><div class="addr-wrap"><input type="text" class="pip-input med" id="sub5Addr" placeholder="Search address" maxlength="150" onkeydown="if(event.key==='Enter'){event.preventDefault();searchAddress('sub5')}"><button class="pip-btn sm" onclick="searchAddress('sub5')">Find</button></div><div class="addr-results" id="sub5AddrResults"></div><div class="addr-picked" id="sub5AddrPicked"></div></div>
+          <button class="pip-btn" onclick="addQuickSub5()">Add</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">// Easy-fix Tasks</div>
+        <table class="log-table" id="sub5Table">
+          <thead><tr><th>Task</th><th>Status</th><th>Deadline</th><th>Loc</th><th></th></tr></thead>
+          <tbody id="sub5Body"></tbody>
+        </table>
+        <div class="empty-state" id="sub5Empty">NO EASY-FIX TASKS</div>
+      </div>
+    </div>
+
+    <div class="sub-section" id="sub-tasks-travel">
+      <div class="panel">
+        <div class="panel-title">// Reiseplan</div>
+        <div class="input-row">
+          <div class="input-group"><label>Dag</label><input type="date" class="pip-input" id="travelDate" onchange="planTravel()"></div>
+          <button class="pip-btn" onclick="planTravel(true)">Oppdater</button>
+        </div>
+        <div class="travel-note" id="travelNote"></div>
+      </div>
+      <div id="travelPlan"></div>
+    </div>
+  </div>
+
+  <!-- ==================== MAP ==================== -->
+  <div class="section" id="section-map">
+    <div class="panel">
+      <div class="panel-title">// Oslo Task Map</div>
+      <div class="map-controls">
+        <div class="input-group">
+          <label>Map Style</label>
+          <select class="pip-input" id="mapStyleSelect" onchange="setMapStylePref(this.value)">
+            <option value="auto">Auto (follow theme)</option>
+            <option value="fallout">Fallout</option>
+            <option value="standard">Standard</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Map Brightness <span class="range-val" id="mapBrightVal">100%</span></label>
+          <input type="range" id="mapBrightness" min="40" max="160" step="5" value="100" oninput="setMapBrightness(this.value)">
+        </div>
+        <button class="pip-btn sm" onclick="setMapBrightness(100)">Reset</button>
+        <label class="pip-checkbox"><input type="checkbox" id="mapRoadColors" checked onchange="setRoadColors(this.checked)"> Veifarger</label>
+      </div>
+      <div class="map-wrap" id="osloMap">
+        <div class="map-key-prompt" id="mapKeyPrompt" style="display:none;">
+          <div class="panel-title" style="border:none; margin:0;">// Map API Key Required</div>
+          <p>This map uses MapTiler vector tiles for street-level detail. Get a free API key (100k loads/mo) and paste it below.</p>
+          <p><a href="https://cloud.maptiler.com/account/keys/" target="_blank">cloud.maptiler.com/account/keys</a></p>
+          <p style="font-size:9px;">Set "Allowed HTTP origins" to <strong>*</strong> (wildcard) for local file access.</p>
+          <div class="input-row" style="margin-top:10px; justify-content:center;">
+            <input type="text" class="pip-input wide" id="mapKeyInput" placeholder="Your MapTiler API key" onkeydown="if(event.key==='Enter')saveMapKey()">
+            <button class="pip-btn" onclick="saveMapKey()">Activate</button>
+          </div>
+        </div>
+      </div>
+      <div class="map-legend" id="mapLegend"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">// Lagrede steder</div>
+      <div class="input-row">
+        <div class="input-group"><label>Navn</label><input type="text" class="pip-input" id="placeName" placeholder="F.eks. Jobb" maxlength="60"></div>
+        <div class="input-group addr-group"><label>Adresse</label><div class="addr-wrap"><input type="text" class="pip-input med" id="placeAddr" placeholder="Søk adresse" maxlength="150" onkeydown="if(event.key==='Enter'){event.preventDefault();searchAddress('place')}"><button class="pip-btn sm" onclick="searchAddress('place')">Find</button></div><div class="addr-results" id="placeAddrResults"></div><div class="addr-picked" id="placeAddrPicked"></div></div>
+        <button class="pip-btn" onclick="savePlace()">Lagre sted</button>
+      </div>
+      <table class="log-table" id="placeTable">
+        <thead><tr><th>Sted</th><th>Adresse</th><th></th></tr></thead>
+        <tbody id="placeBody"></tbody>
+      </table>
+      <div class="empty-state" id="placeEmpty">NO SAVED PLACES YET. IMPORT personlige-data.json UNDER LOG &rarr; DATA, OR ADD HOME ABOVE.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">// Tasks by Location</div>
+      <div id="mapTaskList"></div>
+      <div class="empty-state" id="mapTaskEmpty">NO TASKS WITH LOCATIONS</div>
+    </div>
+  </div>
+
+  <!-- ==================== LOG ==================== -->
+  <div class="section" id="section-log">
+    <div class="time-range-bar">
+      <button class="range-btn active" data-range="7d" onclick="setRange('7d')">Last 7 Days</button>
+      <button class="range-btn" data-range="30d" onclick="setRange('30d')">Last 30 Days</button>
+      <button class="range-btn" data-range="pw" onclick="setRange('pw')">Prev Week</button>
+      <button class="range-btn" data-range="pm" onclick="setRange('pm')">Prev Month</button>
+    </div>
+
+    <div class="sub-tabs" data-subtabs="log">
+      <button class="range-btn active" data-sub="sleep" onclick="switchSub('log','sleep')">Sleep</button>
+      <button class="range-btn" data-sub="screen" onclick="switchSub('log','screen')">Screen Time</button>
+      <button class="range-btn" data-sub="data" onclick="switchSub('log','data')">All Entries / Data</button>
+    </div>
+
+    <div class="sub-section active" id="sub-log-sleep">
+      <div class="panel">
+        <div class="panel-title">// <span id="sleepFormTitle">Log Sleep Entry</span></div>
+        <div class="input-row">
+          <div class="input-group"><label>Date</label><input type="date" class="pip-input" id="sleepDate"></div>
+          <div class="input-group"><label>Bedtime</label><input type="time" class="pip-input" id="sleepBedtime" value="23:00"></div>
+          <div class="input-group"><label>Wake Time</label><input type="time" class="pip-input" id="sleepWake" value="07:00"></div>
+          <div class="input-group"><label>Est. Hours</label><input type="number" class="pip-input" id="sleepHours" step="0.25" min="0" max="16" placeholder="auto -15min"></div>
+          <button class="pip-btn" id="sleepSaveBtn" onclick="addSleep()">Log</button>
+          <button class="pip-btn sm" id="sleepCancelBtn" style="display:none;" onclick="cancelEditSleep()">Cancel</button>
+        </div>
+        <input type="hidden" id="sleepEditDate" value="">
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">// Sleep Overview — <span id="sleepRangeLabel">Last 7 Days</span></div>
+        <div class="stats-grid">
+          <div class="stat-box"><div class="stat-label">Avg Sleep</div><div class="stat-value" id="sleepAvgHours">--<span class="stat-unit">h</span></div></div>
+          <div class="stat-box"><div class="stat-label">Total Sleep</div><div class="stat-value" id="sleepTotalHours">--<span class="stat-unit">h</span></div></div>
+          <div class="stat-box"><div class="stat-label">Avg Bedtime</div><div class="stat-value sm" id="sleepAvgBed">--:--</div></div>
+          <div class="stat-box"><div class="stat-label">Avg Wake</div><div class="stat-value sm" id="sleepAvgWake">--:--</div></div>
+          <div class="stat-box"><div class="stat-label">Entries</div><div class="stat-value" id="sleepEntries">0</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">// Sleep Duration Chart</div>
+        <div class="bar-chart" id="sleepChart"></div>
+        <div class="bar-labels" id="sleepChartLabels"></div>
+        <div class="empty-state" id="sleepChartEmpty">NO DATA</div>
+      </div>
+    </div>
+
+    <div class="sub-section" id="sub-log-screen">
+      <div class="panel">
+        <div class="panel-title">// <span id="screenFormTitle">Log Screen Time</span></div>
+        <div class="input-row">
+          <div class="input-group"><label>Date</label><input type="date" class="pip-input" id="screenDate"></div>
+          <div class="input-group"><label>Total (hrs)</label><input type="number" class="pip-input" id="screenTotal" step="0.25" min="0" max="24" placeholder="e.g. 4.5"></div>
+          <div class="input-group"><label>Social (hrs)</label><input type="number" class="pip-input" id="screenSocial" step="0.25" min="0" max="24" placeholder="e.g. 1.5"></div>
+          <button class="pip-btn" id="screenSaveBtn" onclick="addScreen()">Log</button>
+          <button class="pip-btn sm" id="screenCancelBtn" style="display:none;" onclick="cancelEditScreen()">Cancel</button>
+        </div>
+        <input type="hidden" id="screenEditDate" value="">
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">// Screen Time Overview — <span id="screenRangeLabel">Last 7 Days</span></div>
+        <div class="stats-grid">
+          <div class="stat-box"><div class="stat-label">Avg Total</div><div class="stat-value" id="screenAvgTotal">--<span class="stat-unit">h</span></div></div>
+          <div class="stat-box"><div class="stat-label">Total Screen</div><div class="stat-value" id="screenTotalAll">--<span class="stat-unit">h</span></div></div>
+          <div class="stat-box"><div class="stat-label">Avg Social</div><div class="stat-value" id="screenAvgSocial">--<span class="stat-unit">h</span></div></div>
+          <div class="stat-box"><div class="stat-label">Total Social</div><div class="stat-value" id="screenTotalSocial">--<span class="stat-unit">h</span></div></div>
+          <div class="stat-box"><div class="stat-label">Social %</div><div class="stat-value" id="screenSocialPct">--<span class="stat-unit">%</span></div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">// Daily Screen Time</div>
+        <div class="bar-chart" id="screenChart"></div>
+        <div class="bar-labels" id="screenChartLabels"></div>
+        <div class="empty-state" id="screenChartEmpty">NO DATA</div>
+      </div>
+    </div>
+
+    <div class="sub-section" id="sub-log-data">
+      <div class="panel">
+        <div class="panel-title">// All Entries — <span id="logRangeLabel">Last 7 Days</span></div>
+
+        <h3 style="font-size:11px; letter-spacing:2px; color:var(--pip-green-dim); margin:8px 0 5px; font-weight:normal;">SLEEP LOG</h3>
+        <table class="log-table" id="sleepLogTable"><thead><tr><th>Date</th><th>Bedtime</th><th>Wake</th><th>Hours</th><th></th></tr></thead><tbody id="sleepLogBody"></tbody></table>
+        <div class="empty-state" id="sleepLogEmpty" style="padding:10px">NO SLEEP ENTRIES IN RANGE</div>
+
+        <h3 style="font-size:11px; letter-spacing:2px; color:var(--pip-green-dim); margin:14px 0 5px; font-weight:normal;">SCREEN TIME LOG</h3>
+        <table class="log-table" id="screenLogTable"><thead><tr><th>Date</th><th>Total</th><th>Social</th><th>Social %</th><th></th></tr></thead><tbody id="screenLogBody"></tbody></table>
+        <div class="empty-state" id="screenLogEmpty" style="padding:10px">NO SCREEN ENTRIES IN RANGE</div>
+
+        <div style="margin-top:14px; display:flex; gap:6px; justify-content:flex-end;">
+          <button class="pip-btn sm" onclick="exportData()">Export JSON</button>
+          <label class="pip-btn sm" style="display:inline-block;">Import JSON<input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
+          <button class="pip-btn sm danger" onclick="clearAllData()">Purge All</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">// Sync &amp; Connections</div>
+
+        <div class="input-row">
+          <div class="field-help"><b>Sync between phone and laptop (GitHub Gist).</b> Your data is saved to a secret gist on your GitHub account, and every device with the token sees the same data. Create a token at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>: under Account permissions, set "Gists" to "Read and write". Paste it here once on each device.</div>
+          <div class="input-group"><label>GitHub token</label><input type="password" class="pip-input" id="gistTokenInput" placeholder="github_pat_..." autocomplete="off"></div>
+          <div class="form-actions">
+            <button class="pip-btn sm" onclick="syncConnect()">Connect sync</button>
+            <button class="pip-btn sm" onclick="syncNow()">Sync now</button>
+            <button class="pip-btn sm danger" onclick="syncDisconnect()">Disconnect</button>
+          </div>
+          <div class="conn-status" id="syncStatus"></div>
+        </div>
+
+        <div class="input-row conn-block">
+          <div class="field-help"><b>Google Calendar.</b> Works from the GitHub Pages address, not from a local file. One-time setup: in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a> create a project, enable "Google Calendar API", set up the OAuth consent screen (External, add yourself as test user), and create an OAuth Client ID of type "Web application" with this site's address as an Authorized JavaScript origin. Paste the Client ID here.</div>
+          <div class="input-group"><label>Google OAuth Client ID</label><input type="text" class="pip-input" id="gcalClientInput" placeholder="1234-abc.apps.googleusercontent.com" autocomplete="off"></div>
+          <div class="form-actions">
+            <button class="pip-btn sm" onclick="saveGcalClientId()">Save</button>
+            <button class="pip-btn sm" onclick="gcalConnect()">Connect Google</button>
+            <button class="pip-btn sm danger" onclick="gcalDisconnect()">Disconnect</button>
+          </div>
+          <div class="conn-status" id="gcalStatus2"></div>
+        </div>
+
+        <div class="input-row conn-block">
+          <div class="input-group"><label>MapTiler API key</label><input type="text" class="pip-input" id="mapKeySetting" placeholder="MapTiler key" autocomplete="off"></div>
+          <div class="form-actions"><button class="pip-btn sm" onclick="saveMapKeySetting()">Save</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
+<script>
+// ==================== STATE ====================
+const STORAGE_KEY = 'pipboy_metrics_v2';
+let S = { sleep: [], screen: [], deadlines: [], tasks: [], goals: {}, places: [], settings: {}, meta: {} };  // groups: filled with defaults by normalizeState()
+
+// No personal data (addresses, exams ...) lives in this file: it is published on GitHub.
+// Saved places etc. come from your own data (import personlige-data.json once, then Gist sync).
+const DEFAULT_GROUPS = [
+  { id: 'g-exam', name: 'Eksamen' },
+  { id: 'g-school', name: 'Skole' },
+  { id: 'g-training', name: 'Trening' },
+  { id: 'g-home', name: 'Hjem' },
+  { id: 'g-other', name: 'Annet' },
+];
+function defaultGroups() { return DEFAULT_GROUPS.map(g => ({ ...g })); }
+
+function normalizeState(p) {
+  const st = {
+    sleep: p.sleep || [], screen: p.screen || [], deadlines: p.deadlines || [], tasks: p.tasks || [], goals: p.goals || {},
+    places: Array.isArray(p.places) ? p.places : [],
+    groups: Array.isArray(p.groups) ? p.groups : defaultGroups(),
+    settings: p.settings || {}, meta: p.meta || {},
+  };
+  // Older versions called the home place "Hjem"
+  st.places.forEach(pl => { if (pl.home && pl.name === 'Hjem') pl.name = 'Hjemme'; });
+  return st;
+}
+let currentSection = 'home';
+let currentRange = '7d';
+let taskFilter = 'open';
+let groupFilter = 'all';
+const openTasks = new Set();
+let _idCounter = Date.now();
+function uid() { return 'id_' + (++_idCounter).toString(36); }
+
+// ==================== OSLO LOCATIONS ====================
+const OSLO_LOCATIONS = [
+  // Sentrum & waterfront
+  { name: 'Sentrum', lat: 59.9139, lng: 10.7522 },
+  { name: 'Aker Brygge', lat: 59.9110, lng: 10.7290 },
+  { name: 'Bjørvika', lat: 59.9080, lng: 10.7560 },
+  { name: 'Kvadraturen', lat: 59.9100, lng: 10.7420 },
+  { name: 'Jernbanetorget', lat: 59.9115, lng: 10.7505 },
+  { name: 'Stortinget', lat: 59.9133, lng: 10.7340 },
+  // Indre øst
+  { name: 'Grünerløkka', lat: 59.9225, lng: 10.7600 },
+  { name: 'Tøyen', lat: 59.9160, lng: 10.7720 },
+  { name: 'Sofienberg', lat: 59.9200, lng: 10.7670 },
+  { name: 'Rodeløkka', lat: 59.9260, lng: 10.7660 },
+  { name: 'Kampen', lat: 59.9130, lng: 10.7780 },
+  { name: 'Vålerenga', lat: 59.9090, lng: 10.7850 },
+  { name: 'Gamle Oslo', lat: 59.9060, lng: 10.7700 },
+  { name: 'Ensjø', lat: 59.9120, lng: 10.7920 },
+  { name: 'Helsfyr', lat: 59.9130, lng: 10.8050 },
+  { name: 'Carl Berner', lat: 59.9260, lng: 10.7740 },
+  { name: 'Vulkan', lat: 59.9225, lng: 10.7520 },
+  // Indre vest
+  { name: 'Majorstuen', lat: 59.9290, lng: 10.7130 },
+  { name: 'Frogner', lat: 59.9215, lng: 10.7000 },
+  { name: 'St. Hanshaugen', lat: 59.9260, lng: 10.7380 },
+  { name: 'Bislett', lat: 59.9240, lng: 10.7320 },
+  { name: 'Bygdøy', lat: 59.9050, lng: 10.6850 },
+  { name: 'Skøyen', lat: 59.9210, lng: 10.6750 },
+  { name: 'Smestad', lat: 59.9350, lng: 10.6850 },
+  { name: 'Briskeby', lat: 59.9200, lng: 10.7130 },
+  // Nord
+  { name: 'Sagene', lat: 59.9340, lng: 10.7500 },
+  { name: 'Torshov', lat: 59.9310, lng: 10.7620 },
+  { name: 'Storo', lat: 59.9440, lng: 10.7700 },
+  { name: 'Nydalen', lat: 59.9500, lng: 10.7650 },
+  { name: 'Ullevål', lat: 59.9420, lng: 10.7300 },
+  { name: 'Blindern', lat: 59.9400, lng: 10.7150 },
+  { name: 'Sinsen', lat: 59.9380, lng: 10.7800 },
+  { name: 'Grefsen', lat: 59.9520, lng: 10.7810 },
+  { name: 'Kjelsås', lat: 59.9620, lng: 10.7780 },
+  { name: 'Sogn', lat: 59.9460, lng: 10.7300 },
+  // Øst
+  { name: 'Økern', lat: 59.9310, lng: 10.8050 },
+  { name: 'Hasle', lat: 59.9260, lng: 10.7920 },
+  { name: 'Løren', lat: 59.9330, lng: 10.7950 },
+  { name: 'Bjerke', lat: 59.9420, lng: 10.8150 },
+  { name: 'Grorud', lat: 59.9600, lng: 10.8750 },
+  { name: 'Stovner', lat: 59.9620, lng: 10.9230 },
+  { name: 'Furuset', lat: 59.9510, lng: 10.8850 },
+  { name: 'Ellingsrud', lat: 59.9490, lng: 10.9200 },
+  { name: 'Alna', lat: 59.9340, lng: 10.8450 },
+  // Sør
+  { name: 'Nordstrand', lat: 59.8650, lng: 10.7900 },
+  { name: 'Lambertseter', lat: 59.8750, lng: 10.8000 },
+  { name: 'Manglerud', lat: 59.8950, lng: 10.8100 },
+  { name: 'Oppsal', lat: 59.8900, lng: 10.8300 },
+  { name: 'Bøler', lat: 59.8830, lng: 10.8400 },
+  { name: 'Holmlia', lat: 59.8450, lng: 10.8000 },
+  { name: 'Mortensrud', lat: 59.8380, lng: 10.8100 },
+  { name: 'Skullerud', lat: 59.8700, lng: 10.8350 },
+  { name: 'Ekeberg', lat: 59.8980, lng: 10.7650 },
+  // Vest / Nordvest
+  { name: 'Holmenkollen', lat: 59.9630, lng: 10.6680 },
+  { name: 'Vinderen', lat: 59.9480, lng: 10.7050 },
+  { name: 'Røa', lat: 59.9510, lng: 10.6340 },
+  { name: 'Ullern', lat: 59.9330, lng: 10.6500 },
+];
+
+// ==================== PERSISTENCE ====================
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) S = normalizeState(JSON.parse(raw));
+    // Migrate from v1
+    const v1 = localStorage.getItem('pipboy_metrics_v1');
+    if (v1 && !raw) {
+      const p = JSON.parse(v1);
+      S.sleep = p.sleep || [];
+      S.screen = p.screen || [];
+      if (p.tasks) {
+        p.tasks.forEach(t => {
+          S.tasks.push({ id: uid(), text: t.text, status: t.done ? 'finished' : 'active', sub5min: false, deadlineId: '', created: t.date });
+        });
+      }
+      save();
+    }
+  } catch(e) { console.error('Load failed', e); }
+  S = normalizeState(S);
+}
+
+let _applyingRemote = false;
+function save() {
+  S.meta = { ...(S.meta||{}), updatedAt: Date.now() };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(S));
+  if (!_applyingRemote) scheduleSyncPush();
+}
+
+// ==================== CLOCK ====================
+function updateClock() {
+  document.getElementById('osloClock').textContent = new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hour12: false });
+  updateDateDisplay();
+}
+
+function updateDateDisplay() {
+  document.getElementById('currentDate').textContent = new Date().toLocaleDateString(lang==='no' ? 'nb-NO' : 'en-US',
+    { timeZone: 'Europe/Oslo', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+// ==================== DATE HELPERS ====================
+function todayStr() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Oslo' });
+}
+
+function getRange(key) {
+  const now = new Date(); let s, e;
+  if (key === '7d') { e = new Date(now); s = new Date(now); s.setDate(s.getDate()-6); }
+  else if (key === '30d') { e = new Date(now); s = new Date(now); s.setDate(s.getDate()-29); }
+  else if (key === 'pw') { const dow = now.getDay(); const mo = dow===0?6:dow-1; e = new Date(now); e.setDate(e.getDate()-mo-1); s = new Date(e); s.setDate(s.getDate()-6); }
+  else if (key === 'pm') { s = new Date(now.getFullYear(), now.getMonth()-1, 1); e = new Date(now.getFullYear(), now.getMonth(), 0); }
+  return { start: s.toISOString().slice(0,10), end: e.toISOString().slice(0,10) };
+}
+
+function filterRange(arr) { const {start,end} = getRange(currentRange); return arr.filter(e=>e.date>=start&&e.date<=end).sort((a,b)=>b.date.localeCompare(a.date)); }
+function filterR7(arr) { const {start,end} = getRange('7d'); return arr.filter(e=>e.date>=start&&e.date<=end); }
+function rangeLabel(k) { return {'7d':'Last 7 Days','30d':'Last 30 Days','pw':'Prev Week','pm':'Prev Month'}[k]; }
+function fmtDate(d) { const dt=new Date(d+'T12:00:00'); return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()]+' '+d.slice(5); }
+function shortD(d) { return d.slice(5); }
+
+function daysUntil(dateStr) {
+  const now = new Date(todayStr()+'T00:00:00');
+  const dl = new Date(dateStr+'T00:00:00');
+  return Math.ceil((dl-now)/(86400000));
+}
+
+function timeUntil(dateStr, timeStr) {
+  const nowOslo = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Oslo', hour12: false });
+  const parts = nowOslo.replace(',','').split(' ');
+  const nowMs = new Date(parts[0]+'T'+(parts[1]||'00:00:00')).getTime();
+  const dlMs = new Date(dateStr+'T'+(timeStr||'23:59')+':00').getTime();
+  const diff = dlMs - nowMs;
+  const absDiff = Math.abs(diff);
+  const totalMins = Math.floor(absDiff / 60000);
+  const days = Math.floor(totalMins / 1440);
+  const hrs = Math.floor((totalMins % 1440) / 60);
+  const mins = totalMins % 60;
+  return { days, hrs, mins, totalMins, past: diff < 0 };
+}
+
+function fmtCountdown(d) {
+  if (!d.date) return { main: '?', sub: 'date not known' };
+  const tu = timeUntil(d.date, d.time);
+  if (tu.past) {
+    if (tu.days > 0) return { main: 'OVERDUE', sub: tu.days+'d '+tu.hrs+'h ago' };
+    if (tu.hrs > 0) return { main: 'OVERDUE', sub: tu.hrs+'h '+tu.mins+'m ago' };
+    return { main: 'OVERDUE', sub: tu.mins+'m ago' };
+  }
+  if (tu.days > 0) {
+    const extra = d.time ? ' '+tu.hrs+'h' : '';
+    return { main: tu.days+'<span class="stat-unit"> day'+(tu.days!==1?'s':'')+'</span>'+extra, sub: 'remaining' };
+  }
+  if (tu.hrs > 0) return { main: tu.hrs+'h '+tu.mins+'m', sub: 'remaining' };
+  return { main: tu.mins+'<span class="stat-unit"> min</span>', sub: 'remaining' };
+}
+
+function isDeadlinePast(d) {
+  if (!d.date) return false;
+  return timeUntil(d.date, d.time).past;
+}
+
+// ==================== TIME HELPERS ====================
+function t2m(t) { const [h,m]=t.split(':').map(Number); return h*60+m; }
+function m2t(m) { m=((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.round(m%60)).padStart(2,'0'); }
+const ONSET = 15;
+function calcSleep(bed,wake) { let d=t2m(wake)-t2m(bed); if(d<=0)d+=1440; return Math.round(Math.max(0,d-ONSET)/60*4)/4; }
+function avgTime(times) {
+  if(!times.length) return '--:--';
+  let ss=0,cc=0;
+  times.forEach(t=>{const a=(t2m(t)/1440)*2*Math.PI; ss+=Math.sin(a); cc+=Math.cos(a);});
+  let a=Math.atan2(ss/times.length,cc/times.length); if(a<0)a+=2*Math.PI;
+  return m2t(Math.round((a/(2*Math.PI))*1440));
+}
+
+// ==================== DEADLINE HELPERS ====================
+// Deadlines without a date sort last
+function byDl(a, b) { return ((a.date||'9999-12-31')+(a.time||'')).localeCompare((b.date||'9999-12-31')+(b.time||'')); }
+function getDeadline(id) { return S.deadlines.find(d=>d.id===id); }
+function deadlineTasks(dlId) { return S.tasks.filter(t=>t.deadlineId===dlId); }
+function deadlineActiveTasks(dlId) { return deadlineTasks(dlId).filter(t=>t.status==='active'||t.status==='in_progress'); }
+
+// ==================== SLEEP ====================
+function addSleep() {
+  const editDate = document.getElementById('sleepEditDate').value;
+  const date = document.getElementById('sleepDate').value;
+  const bed = document.getElementById('sleepBedtime').value;
+  const wake = document.getElementById('sleepWake').value;
+  let hrs = parseFloat(document.getElementById('sleepHours').value);
+  if (!date||!bed||!wake) { toast('FILL IN DATE, BEDTIME, AND WAKE TIME'); return; }
+  const max = calcSleep(bed,wake);
+  if (isNaN(hrs)||hrs===0) hrs=max;
+  else if (hrs>max) { toast('EST. HOURS EXCEEDS WINDOW ('+max+'h MAX)'); return; }
+  if (editDate) S.sleep = S.sleep.filter(e=>e.date!==editDate);
+  S.sleep = S.sleep.filter(e=>e.date!==date);
+  S.sleep.push({date,bedtime:bed,wake,hours:hrs});
+  save(); cancelEditSleep(); render(); toast('SLEEP ENTRY '+(editDate?'UPDATED':'LOGGED'));
+  const nd=new Date(date+'T12:00:00'); nd.setDate(nd.getDate()+1);
+  document.getElementById('sleepDate').value=nd.toISOString().slice(0,10);
+  document.getElementById('sleepHours').value='';
+}
+
+function editSleep(date) {
+  const e = S.sleep.find(x=>x.date===date); if(!e) return;
+  document.getElementById('sleepEditDate').value = date;
+  document.getElementById('sleepDate').value = e.date;
+  document.getElementById('sleepBedtime').value = e.bedtime;
+  document.getElementById('sleepWake').value = e.wake;
+  document.getElementById('sleepHours').value = e.hours;
+  document.getElementById('sleepFormTitle').textContent = 'Edit Sleep Entry';
+  document.getElementById('sleepSaveBtn').textContent = 'Update';
+  document.getElementById('sleepCancelBtn').style.display = '';
+  switchSection('log', 'sleep');
+}
+
+function cancelEditSleep() {
+  document.getElementById('sleepEditDate').value = '';
+  document.getElementById('sleepFormTitle').textContent = 'Log Sleep Entry';
+  document.getElementById('sleepSaveBtn').textContent = 'Log';
+  document.getElementById('sleepCancelBtn').style.display = 'none';
+}
+
+function delSleep(d) { S.sleep=S.sleep.filter(e=>e.date!==d); save(); render(); }
+
+// ==================== SCREEN ====================
+function addScreen() {
+  const editDate = document.getElementById('screenEditDate').value;
+  const date = document.getElementById('screenDate').value;
+  const total = parseFloat(document.getElementById('screenTotal').value);
+  const social = parseFloat(document.getElementById('screenSocial').value);
+  if (!date||isNaN(total)) { toast('FILL IN DATE AND TOTAL'); return; }
+  const sv = isNaN(social)?0:social;
+  if (editDate) S.screen = S.screen.filter(e=>e.date!==editDate);
+  S.screen = S.screen.filter(e=>e.date!==date);
+  S.screen.push({date,total,social:sv});
+  save(); cancelEditScreen(); render(); toast('SCREEN TIME '+(editDate?'UPDATED':'LOGGED'));
+  const nd=new Date(date+'T12:00:00'); nd.setDate(nd.getDate()+1);
+  document.getElementById('screenDate').value=nd.toISOString().slice(0,10);
+  document.getElementById('screenTotal').value='';
+  document.getElementById('screenSocial').value='';
+}
+
+function editScreen(date) {
+  const e = S.screen.find(x=>x.date===date); if(!e) return;
+  document.getElementById('screenEditDate').value = date;
+  document.getElementById('screenDate').value = e.date;
+  document.getElementById('screenTotal').value = e.total;
+  document.getElementById('screenSocial').value = e.social;
+  document.getElementById('screenFormTitle').textContent = 'Edit Screen Time';
+  document.getElementById('screenSaveBtn').textContent = 'Update';
+  document.getElementById('screenCancelBtn').style.display = '';
+  switchSection('log', 'screen');
+}
+
+function cancelEditScreen() {
+  document.getElementById('screenEditDate').value = '';
+  document.getElementById('screenFormTitle').textContent = 'Log Screen Time';
+  document.getElementById('screenSaveBtn').textContent = 'Log';
+  document.getElementById('screenCancelBtn').style.display = 'none';
+}
+
+function delScreen(d) { S.screen=S.screen.filter(e=>e.date!==d); save(); render(); }
+
+// ==================== DEADLINES ====================
+function saveDeadline() {
+  const editId = document.getElementById('dlEditId').value;
+  const title = document.getElementById('dlTitle').value.trim();
+  const date = document.getElementById('dlDate').value;
+  const time = document.getElementById('dlTime').value || '';
+  const pri = document.getElementById('dlPriority').value;
+  if (!title) { toast('FILL IN A TITLE'); return; }
+  if (editId) {
+    const dl = getDeadline(editId);
+    if (dl) { dl.title=title; dl.date=date; dl.time=time; dl.priority=pri; }
+  } else {
+    S.deadlines.push({ id: uid(), title, date, time, priority: pri });
+  }
+  save(); cancelEditDeadline(); render();
+  toast('DEADLINE '+(editId?'UPDATED':'ADDED'));
+  document.getElementById('dlTitle').value='';
+  document.getElementById('dlDate').value='';
+  document.getElementById('dlTime').value='';
+  document.getElementById('dlPriority').value='normal';
+}
+
+function editDeadline(id) {
+  const dl = getDeadline(id); if(!dl) return;
+  document.getElementById('dlEditId').value = id;
+  document.getElementById('dlTitle').value = dl.title;
+  document.getElementById('dlDate').value = dl.date;
+  document.getElementById('dlTime').value = dl.time || '';
+  document.getElementById('dlPriority').value = dl.priority;
+  document.getElementById('dlFormTitle').textContent = 'Edit Deadline';
+  document.getElementById('dlCancelBtn').style.display = '';
+  switchSection('deadlines');
+}
+
+function cancelEditDeadline() {
+  document.getElementById('dlEditId').value = '';
+  document.getElementById('dlFormTitle').textContent = 'Add Deadline';
+  document.getElementById('dlCancelBtn').style.display = 'none';
+}
+
+function delDeadline(id) {
+  if (!confirm('Delete deadline and unlink all tasks?')) return;
+  S.deadlines = S.deadlines.filter(d=>d.id!==id);
+  S.tasks.forEach(t=>{ if(t.deadlineId===id) t.deadlineId=''; });
+  save(); render();
+}
+
+// ==================== TASKS ====================
+function saveTask() {
+  const editId = document.getElementById('taskEditId').value;
+  const text = document.getElementById('taskText').value.trim();
+  const { location, placeId } = parsePlaceValue(document.getElementById('taskLocation').value);
+  const date = document.getElementById('taskWhenDate').value;
+  const time = document.getElementById('taskWhenTime').value;
+  if (!text) { toast('ENTER A TASK'); return; }
+  if (time && !date) { toast('PICK A DATE FOR THE TIME'); return; }
+  const pendingStep = document.getElementById('taskStepInput').value.trim();
+  if (pendingStep) addStepDraft();
+  const fields = {
+    text, desc: document.getElementById('taskDesc').value.trim(),
+    groupId: document.getElementById('taskGroup').value.replace('__new',''),
+    important: document.getElementById('taskImportant').checked,
+    deadlineId: document.getElementById('taskDeadline').value,
+    sub5min: document.getElementById('taskSub5').checked,
+    location, placeId, geo: addrSel.task, date, time,
+    steps: stepsDraft.map(st => ({ ...st })),
+  };
+  if (editId) {
+    const t = S.tasks.find(x=>x.id===editId);
+    if (t) Object.assign(t, fields);
+  } else {
+    S.tasks.push({ id: uid(), status: 'active', created: todayStr(), ...fields });
+  }
+  resetTaskForm();
+  save(); render();
+  toast('TASK '+(editId?'UPDATED':'ADDED'));
+  refreshWeatherWarnings();
+}
+
+function resetTaskForm() {
+  document.getElementById('taskEditId').value = '';
+  ['taskText','taskDesc','taskDeadline','taskLocation','taskWhenDate','taskWhenTime','taskGroup','taskStepInput'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('taskSub5').checked = false;
+  document.getElementById('taskImportant').checked = false;
+  clearAddress('task');
+  stepsDraft = []; renderStepsDraft();
+  document.getElementById('quickDl').classList.remove('open');
+  document.getElementById('taskFormTitle').textContent = tr('Add Task');
+  document.getElementById('taskCancelBtn').style.display = 'none';
+  renderDeadlineChips();
+}
+
+function editTask(id) {
+  const t = S.tasks.find(x=>x.id===id); if(!t) return;
+  switchSection('tasks', 'all');
+  document.getElementById('taskEditId').value = id;
+  document.getElementById('taskText').value = t.text;
+  document.getElementById('taskDesc').value = t.desc||'';
+  document.getElementById('taskGroup').value = t.groupId||'';
+  document.getElementById('taskImportant').checked = !!t.important;
+  document.getElementById('taskDeadline').value = t.deadlineId||'';
+  document.getElementById('taskSub5').checked = !!t.sub5min;
+  document.getElementById('taskLocation').value = t.placeId ? 'place:'+t.placeId : (t.location||'');
+  document.getElementById('taskWhenDate').value = t.date||'';
+  document.getElementById('taskWhenTime').value = t.time||'';
+  setPickedAddress('task', t.geo||null);
+  stepsDraft = (t.steps||[]).map(st => ({ ...st })); renderStepsDraft();
+  document.getElementById('taskFormTitle').textContent = tr('Edit Task');
+  document.getElementById('taskCancelBtn').style.display = '';
+  renderDeadlineChips();
+  document.getElementById('taskText').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function cancelEditTask() { resetTaskForm(); }
+
+// Start a new task on a given day (from the calendar)
+function newTaskOn(date) {
+  resetTaskForm();
+  switchSection('tasks', 'all');
+  document.getElementById('taskWhenDate').value = date;
+  document.getElementById('taskText').focus();
+}
+
+// ---- Subtasks (steps), like Microsoft To Do ----
+let stepsDraft = [];
+function addStepDraft() {
+  const inp = document.getElementById('taskStepInput');
+  const text = inp.value.trim(); if (!text) return;
+  stepsDraft.push({ id: uid(), text, done: false });
+  inp.value = ''; renderStepsDraft(); inp.focus();
+}
+function removeStepDraft(i) { stepsDraft.splice(i, 1); renderStepsDraft(); }
+function toggleStepDraft(i) { stepsDraft[i].done = !stepsDraft[i].done; }
+function renderStepsDraft() {
+  document.getElementById('taskStepsEdit').innerHTML = stepsDraft.map((st, i) => `<div class="step-edit">
+      <input type="checkbox" ${st.done?'checked':''} onchange="toggleStepDraft(${i})">
+      <span data-noi18n>${escHtml(st.text)}</span>
+      <button type="button" class="act-btn del" onclick="removeStepDraft(${i})">[x]</button></div>`).join('');
+}
+
+// ---- Groups ----
+function getGroup(id) { return S.groups.find(g=>g.id===id); }
+function onGroupSelect(sel) {
+  if (sel.value !== '__new') return;
+  const name = (prompt(tr('Name of the new group:')) || '').trim();
+  if (!name) { sel.value = ''; return; }
+  const g = { id: uid(), name: name.slice(0, 40) };
+  S.groups.push(g); save(); render();
+  document.getElementById('taskGroup').value = g.id;
+}
+function delGroup(id) {
+  const g = getGroup(id); if (!g) return;
+  if (!confirm(tr('Delete group') + ' "' + g.name + '"? ' + tr('Its tasks are kept, without a group.'))) return;
+  S.groups = S.groups.filter(x=>x.id!==id);
+  S.tasks.forEach(t => { if (t.groupId===id) t.groupId=''; });
+  if (groupFilter===id) groupFilter='all';
+  save(); render();
+}
+
+// ---- Deadline picking: chips for the next deadlines + quick create ----
+function renderDeadlineChips() {
+  const sel = document.getElementById('taskDeadline').value;
+  const upcoming = S.deadlines.filter(d => !isDeadlinePast(d)).sort(byDl).slice(0, 8);
+  document.getElementById('taskDlChips').innerHTML = upcoming.map(d => {
+    const when = d.date ? (daysUntil(d.date)===0 ? tr('today') : shortD(d.date) + ' · ' + daysUntil(d.date) + tr('d')) : tr('Date not known');
+    return `<button type="button" class="dl-chip ${d.id===sel?'sel':''} ${d.priority==='urgent'?'pri-urgent-b':d.priority==='high'?'pri-high-b':''}" onclick="chooseDeadline('${d.id}')"><span data-noi18n>${escHtml(d.title)}</span><small>${when}</small></button>`;
+  }).join('');
+}
+function chooseDeadline(id) {
+  const sel = document.getElementById('taskDeadline');
+  sel.value = sel.value === id ? '' : id;
+  renderDeadlineChips();
+}
+function toggleQuickDeadline() {
+  const box = document.getElementById('quickDl');
+  box.classList.toggle('open');
+  if (box.classList.contains('open')) document.getElementById('qdlTitle').focus();
+}
+function createQuickDeadline() {
+  const title = document.getElementById('qdlTitle').value.trim();
+  if (!title) { toast('FILL IN A TITLE'); return; }
+  const d = { id: uid(), title, date: document.getElementById('qdlDate').value, time: '', priority: document.getElementById('qdlPriority').value };
+  S.deadlines.push(d); save(); render();
+  document.getElementById('taskDeadline').value = d.id;
+  document.getElementById('qdlTitle').value = ''; document.getElementById('qdlDate').value = '';
+  document.getElementById('quickDl').classList.remove('open');
+  renderDeadlineChips();
+  toast('DEADLINE ADDED');
+}
+
+function setTaskStatus(id, status) {
+  const t = S.tasks.find(x=>x.id===id);
+  if (t) { t.status = status; save(); render(); }
+}
+
+function delTask(id) {
+  S.tasks = S.tasks.filter(t=>t.id!==id);
+  Object.keys(S.goals).forEach(d => {
+    S.goals[d].taskIds = S.goals[d].taskIds.filter(tid=>tid!==id);
+  });
+  save(); render();
+}
+
+function addQuickSub5() {
+  const text = document.getElementById('sub5QuickText').value.trim();
+  const dlId = document.getElementById('sub5Deadline').value;
+  const { location: loc, placeId } = parsePlaceValue(document.getElementById('sub5Location').value);
+  if (!text) { toast('ENTER A TASK'); return; }
+  S.tasks.push({ id: uid(), text, status: 'active', sub5min: true, deadlineId: dlId, location: loc, placeId, geo: addrSel.sub5, created: todayStr() });
+  save(); render(); toast('QUICK TASK ADDED');
+  document.getElementById('sub5QuickText').value='';
+  document.getElementById('sub5Deadline').value='';
+  document.getElementById('sub5Location').value='';
+  clearAddress('sub5');
+}
+
+function setTaskFilter(f) {
+  taskFilter = f;
+  document.querySelectorAll('#taskFilterBar .range-btn').forEach(b=>b.classList.toggle('active', b.dataset.tf===f));
+  render();
+}
+
+// ==================== ADDRESS GEOTAGGING ====================
+// Uses the MapTiler Geocoding API with the same key as the map.
+// A task's address is stored as t.geo = { label, lat, lng } (null when untagged).
+const addrSel = { task: null, sub5: null, place: null };
+const addrResults = { task: [], sub5: [], place: [] };
+
+function shortAddr(label) { return String(label||'').split(',').slice(0,2).join(',').trim(); }
+function getPlace(id) { return S.places.find(p=>p.id===id); }
+function homePlace() { return S.places.find(p=>p.home) || null; }
+function parsePlaceValue(v) { return v && v.startsWith('place:') ? { location: '', placeId: v.slice(6) } : { location: v||'', placeId: '' }; }
+
+// Where a task happens: exact address > saved place > Oslo area. Returns { name, lat, lng, kind } or null.
+function taskPoint(t) {
+  if (t.geo && isFinite(t.geo.lat) && isFinite(t.geo.lng)) return { name: shortAddr(t.geo.label), lat: +t.geo.lat, lng: +t.geo.lng, kind: 'addr' };
+  const pl = t.placeId ? getPlace(t.placeId) : null;
+  if (pl) return { name: pl.name, lat: pl.lat, lng: pl.lng, kind: 'place' };
+  const l = t.location ? OSLO_LOCATIONS.find(x=>x.name===t.location) : null;
+  if (l) return { name: l.name, lat: l.lat, lng: l.lng, kind: 'area' };
+  return null;
+}
+function taskPlace(t) { const pt = taskPoint(t); return pt ? pt.name : (t.location||''); }
+
+// Entur geocoder (addresses/stops) + OpenStreetMap Nominatim (named places like gyms, schools). No key needed.
+async function geocode(q) {
+  const entur = fetch('https://api.entur.io/geocoder/v1/autocomplete?text=' + encodeURIComponent(q) +
+      '&lang=no&size=6&focus.point.lat=59.92&focus.point.lon=10.74', { headers: { 'ET-Client-Name': ENTUR_CLIENT } })
+    .then(r => r.ok ? r.json() : { features: [] })
+    .then(d => (d.features||[]).map(f => ({ label: f.properties.label, lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] })));
+  const osm = fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=no&viewbox=10.4,60.05,11.0,59.78&q=' + encodeURIComponent(q))
+    .then(r => r.ok ? r.json() : [])
+    .then(d => d.map(f => ({ label: f.display_name.split(',').slice(0,4).join(',').trim(), lat: +f.lat, lng: +f.lon })));
+  const [a, b] = await Promise.allSettled([entur, osm]);
+  let out = [...(a.status==='fulfilled' ? a.value : []), ...(b.status==='fulfilled' ? b.value : [])];
+  const key = getMapKey();
+  if (!out.length && key) {
+    const res = await fetch('https://api.maptiler.com/geocoding/' + encodeURIComponent(q) + '.json?key=' + encodeURIComponent(key) +
+      '&proximity=10.7522,59.9139&country=no&limit=6&language=no');
+    if (res.ok) out = ((await res.json()).features||[]).filter(f=>Array.isArray(f.center)).map(f => ({ label: f.place_name || f.text || q, lng: f.center[0], lat: f.center[1] }));
+  }
+  if (!out.length && a.status==='rejected' && b.status==='rejected') throw a.reason;
+  // Drop near-duplicates (same spot reported by both sources)
+  return out.filter((r, i) => out.findIndex(o => distM(o, r) < 25) === i).slice(0, 8);
+}
+
+async function searchAddress(pre) {
+  const q = document.getElementById(pre+'Addr').value.trim();
+  const box = document.getElementById(pre+'AddrResults');
+  if (!q) { toast('ENTER AN ADDRESS'); return; }
+  box.innerHTML = '<div class="addr-none">SEARCHING...</div>'; box.classList.add('open');
+  try {
+    addrResults[pre] = await geocode(q);
+    box.innerHTML = addrResults[pre].length
+      ? addrResults[pre].map((r,i)=>`<button type="button" onclick="pickAddress('${pre}',${i})">${escHtml(r.label)}</button>`).join('')
+      : '<div class="addr-none">NO MATCHES</div>';
+  } catch(e) {
+    console.error('Geocoding failed', e);
+    box.innerHTML = '<div class="addr-none">SEARCH FAILED — CHECK CONNECTION</div>';
+  }
+}
+
+function pickAddress(pre, i) {
+  const r = addrResults[pre][i]; if (!r) return;
+  setPickedAddress(pre, { label: r.label, lat: r.lat, lng: r.lng });
+  document.getElementById(pre+'Addr').value = '';
+}
+
+function setPickedAddress(pre, geo) {
+  addrSel[pre] = geo;
+  document.getElementById(pre+'AddrResults').classList.remove('open');
+  document.getElementById(pre+'AddrPicked').innerHTML = geo
+    ? `@ ${escHtml(shortAddr(geo.label))} <button type="button" onclick="clearAddress('${pre}')" title="Remove address">[x]</button>`
+    : '';
+}
+
+function clearAddress(pre) {
+  document.getElementById(pre+'Addr').value = '';
+  setPickedAddress(pre, null);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.addr-group')) document.querySelectorAll('.addr-results.open').forEach(b=>b.classList.remove('open'));
+});
+
+// ==================== SAVED PLACES ====================
+function savePlace() {
+  const name = document.getElementById('placeName').value.trim();
+  const geo = addrSel.place;
+  if (!name) { toast('GI STEDET ET NAVN'); return; }
+  if (!geo) { toast('SØK OG VELG EN ADRESSE'); return; }
+  S.places.push({ id: uid(), name, label: geo.label, lat: geo.lat, lng: geo.lng });
+  save(); render(); toast('STED LAGRET');
+  document.getElementById('placeName').value = '';
+  clearAddress('place');
+}
+
+function delPlace(id) {
+  const pl = getPlace(id); if (!pl) return;
+  if (!confirm('Slette «' + pl.name + '»? Oppgaver knyttet til stedet mister stedet.')) return;
+  S.places = S.places.filter(p=>p.id!==id);
+  S.tasks.forEach(t => { if (t.placeId===id) t.placeId=''; });
+  save(); render();
+}
+
+function setHomePlace(id) {
+  S.places.forEach(p => { p.home = p.id===id; });
+  save(); render(); toast('HJEM OPPDATERT');
+}
+
+function panToPlace(id) {
+  const pl = getPlace(id);
+  if (!pl) return;
+  if (!osloMap) { toast('KARTET ER IKKE LASTET'); return; }
+  osloMap.flyTo({ center: [pl.lng, pl.lat], zoom: 16 });
+}
+
+function renderPlaces() {
+  document.getElementById('placeEmpty').style.display = S.places.length ? 'none' : 'block';
+  document.getElementById('placeTable').style.display = S.places.length ? '' : 'none';
+  const home = homePlace();
+  const ordered = home ? [home, ...S.places.filter(p=>p!==home)] : S.places;
+  document.getElementById('placeBody').innerHTML = ordered.map(p => `<tr>
+    <td data-noi18n>${escHtml(p.name)}${p.home?' <span style="color:var(--pip-green-dim)">&#8962;</span>':''}</td>
+    <td style="font-size:10px;color:var(--pip-green-dim)">${escHtml(p.label||'')}</td>
+    <td style="white-space:nowrap;">
+      <button class="act-btn" onclick="panToPlace('${p.id}')" title="Vis på kart">[kart]</button>
+      ${p.home?'':`<button class="act-btn" onclick="setHomePlace('${p.id}')" title="Sett som hjem (start for hver dag)">[hjem]</button>`}
+      <button class="act-btn del" onclick="delPlace('${p.id}')">[x]</button>
+    </td></tr>`).join('');
+}
+
+// ==================== WEATHER (Open-Meteo, no key) ====================
+// Rain warning: a task/trip gets ⚠☔ when it rains at departure but it was dry
+// the last time you were outdoors (= the previous scheduled task, up to 36 h back).
+const WX_POINT = { lat: 59.93, lng: 10.72 };
+const RAIN_MM = 0.2;
+let wxCache = null;      // { at: ms, byHour: { 'YYYY-MM-DDTHH:00': { mm, code } } }
+let wxWarnings = {};     // taskId -> { rain, changed, refTime }
+
+async function getWeather(force) {
+  if (!force && wxCache && Date.now() - wxCache.at < 30*60000) return wxCache;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${WX_POINT.lat}&longitude=${WX_POINT.lng}` +
+    '&hourly=precipitation,weather_code&timezone=Europe%2FOslo&past_days=2&forecast_days=14';
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Weather HTTP ' + res.status);
+  const d = await res.json();
+  const byHour = {};
+  d.hourly.time.forEach((t, i) => { byHour[t] = { mm: d.hourly.precipitation[i], code: d.hourly.weather_code[i] }; });
+  wxCache = { at: Date.now(), byHour };
+  return wxCache;
+}
+
+function isRainCode(c) { return (c>=51 && c<=67) || (c>=80 && c<=82) || c>=95; }
+// true / false, or null when there is no forecast for that hour
+function rainAt(date, hhmm) {
+  if (!wxCache || !date || !hhmm) return null;
+  const h = wxCache.byHour[date + 'T' + hhmm.slice(0,2) + ':00'];
+  if (!h) return null;
+  return (h.mm ?? 0) >= RAIN_MM || isRainCode(h.code);
+}
+
+function minutesOf(date, hhmm) { return Date.parse(date + 'T' + hhmm + ':00Z') / 60000; }
+
+// Scheduled tasks with a place, in time order (the "chain" of times you are outdoors).
+function scheduledTasks() {
+  return S.tasks.filter(t => t.date && t.time && t.status!=='discarded' && taskPoint(t))
+    .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+}
+
+function previousOutdoor(t) {
+  const list = scheduledTasks();
+  const i = list.findIndex(x => x.id===t.id);
+  const prev = i > 0 ? list[i-1] : null;
+  if (!prev) return null;
+  const gap = minutesOf(t.date, t.time) - minutesOf(prev.date, prev.time);
+  return gap <= 36*60 ? { date: prev.date, time: prev.time } : null;
+}
+
+function rainStatus(t, depTime) {
+  const dep = depTime || t.time;
+  const rain = rainAt(t.date, dep);
+  if (!rain) return null;
+  const ref = previousOutdoor(t);
+  const refRain = ref ? rainAt(ref.date, ref.time) : null;
+  return { rain: true, changed: refRain === false, refTime: ref ? ref.time : null, dep };
+}
+
+function wxBadge(w) {
+  if (!w) return '';
+  if (w.changed) return `<span class="wx-warn" title="Regn ved avreise (${w.dep}) – det var oppholdsvær sist du var ute (${w.refTime})">⚠☔</span>`;
+  return `<span class="wx-rain" title="Regn ventet rundt ${w.dep}">☔</span>`;
+}
+
+async function refreshWeatherWarnings() {
+  const today = todayStr();
+  const upcoming = scheduledTasks().filter(t => t.date >= today);
+  if (!upcoming.length) { wxWarnings = {}; return; }
+  try { await getWeather(); } catch(e) { console.error('Weather failed', e); return; }
+  const next = {};
+  upcoming.forEach(t => { const w = rainStatus(t); if (w) next[t.id] = w; });
+  wxWarnings = next;
+  renderTasks();
+}
+
+// ==================== TRAVEL PLANNER (Entur / Ruter) ====================
+// Entur's journey planner is the national source behind Ruter's own planner:
+// real-time departures, Ruter disruptions (situations), plus walk & bike routing. No key required.
+const ENTUR_URL = 'https://api.entur.io/journey-planner/v3/graphql';
+const ENTUR_CLIENT = 'privat-pipboydashboard';
+const ENTUR_QUERY = `query($from: Location!, $to: Location!, $dateTime: DateTime!, $arriveBy: Boolean, $modes: Modes, $n: Int) {
+  trip(from: $from, to: $to, dateTime: $dateTime, arriveBy: $arriveBy, numTripPatterns: $n, modes: $modes) {
+    tripPatterns { expectedStartTime expectedEndTime duration distance
+      legs { mode distance duration expectedStartTime expectedEndTime
+        fromPlace { name } toPlace { name }
+        line { publicCode name transportMode authority { name } }
+        situations { summary { value language } description { value language } } } } } }`;
+const MODE_NO = { metro: 'T-bane', bus: 'Buss', tram: 'Trikk', rail: 'Tog', water: 'Båt', coach: 'Buss', air: 'Fly', foot: 'Gå', bicycle: 'Sykkel' };
+const tripCache = {};
+
+// 'YYYY-MM-DD', 'HH:MM' in Oslo local time -> ISO string with the correct Oslo UTC offset
+function osloIso(date, time) {
+  let off = '+01:00';
+  try {
+    const tz = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Oslo', timeZoneName: 'longOffset' })
+      .formatToParts(new Date(date + 'T' + time + ':00Z')).find(p => p.type === 'timeZoneName').value;
+    const m = tz.match(/GMT([+-]\d{2}:\d{2})/);
+    if (m) off = m[1];
+  } catch(e) {}
+  return date + 'T' + time + ':00' + off;
+}
+
+async function enturTrip(from, to, dateTime, modes, n) {
+  const key = JSON.stringify([from.lat, from.lng, to.lat, to.lng, dateTime, modes, n]);
+  if (tripCache[key] && Date.now() - tripCache[key].at < 5*60000) return tripCache[key].data;
+  const loc = p => ({ name: p.name, coordinates: { latitude: p.lat, longitude: p.lng } });
+  const res = await fetch(ENTUR_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'ET-Client-Name': ENTUR_CLIENT },
+    body: JSON.stringify({ query: ENTUR_QUERY, variables: { from: loc(from), to: loc(to), dateTime, arriveBy: true, modes, n } }),
+  });
+  if (!res.ok) throw new Error('Entur HTTP ' + res.status);
+  const j = await res.json();
+  if (j.errors) throw new Error(j.errors.map(e=>e.message).join('; '));
+  const data = j.data.trip.tripPatterns;
+  tripCache[key] = { at: Date.now(), data };
+  return data;
+}
+
+function hm(iso) { return iso ? iso.slice(11,16) : '--:--'; }
+function mins(sec) { return Math.round(sec/60); }
+function km(m) { return (m/1000).toFixed(1).replace('.', ',') + ' km'; }
+function distM(a, b) {
+  const R = 6371000, toR = x => x*Math.PI/180;
+  const dLat = toR(b.lat-a.lat), dLng = toR(b.lng-a.lng);
+  const h = Math.sin(dLat/2)**2 + Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function nbText(list) {
+  if (!list || !list.length) return '';
+  const nb = list.find(x => ['nob','no','nor'].includes(x.language)) || list[0];
+  return nb.value || '';
+}
+function gmapsLink(from, to, mode) {
+  return 'https://www.google.com/maps/dir/?api=1&origin=' + from.lat + ',' + from.lng +
+    '&destination=' + to.lat + ',' + to.lng + '&travelmode=' + mode;
+}
+
+function transitHtml(patterns) {
+  const withTransit = patterns.filter(p => p.legs.some(l => l.line)).slice(0, 3);
+  if (!withTransit.length) return '<div style="color:var(--pip-green-dim)">Ingen kollektivforbindelse – gå eller sykle.</div>';
+  const sits = new Map();
+  const rows = withTransit.map(p => {
+    const lines = p.legs.filter(l => l.line).map(l => {
+      (l.situations||[]).forEach(s => {
+        const sum = nbText(s.summary);
+        if (sum && !sits.has(sum)) sits.set(sum, { line: (MODE_NO[l.mode]||l.mode) + ' ' + (l.line.publicCode||''), desc: nbText(s.description) });
+      });
+      return escHtml((MODE_NO[l.mode]||l.mode) + ' ' + (l.line.publicCode||l.line.name||''));
+    }).join(' → ');
+    return `<div>Gå ${hm(p.expectedStartTime)} → fremme ${hm(p.expectedEndTime)} · ${mins(p.duration)} min · ${lines}</div>`;
+  }).join('');
+  const sitHtml = [...sits.entries()].map(([sum, s]) =>
+    `<div class="travel-sit">⚠ Ruter-avvik (${escHtml(s.line)}): ${escHtml(sum)}${s.desc && s.desc!==sum ? `<small>${escHtml(s.desc)}</small>` : ''}</div>`).join('');
+  return rows + sitHtml;
+}
+
+function directHtml(patterns, verb) {
+  const p = patterns && patterns[0];
+  if (!p) return '<div style="color:var(--pip-green-dim)">Fant ingen rute.</div>';
+  return `<div>${mins(p.duration)} min · ${km(p.distance)} · ${verb} senest ${hm(p.expectedStartTime)}</div>`;
+}
+
+let travelRun = 0;
+
+async function planTravel(force) {
+  const run = ++travelRun;
+  const dateEl = document.getElementById('travelDate');
+  if (!dateEl.value) dateEl.value = todayStr();
+  const date = dateEl.value;
+  const box = document.getElementById('travelPlan');
+  const home = homePlace();
+  document.getElementById('travelNote').innerHTML = home
+    ? `Dagen starter hjemme: <b>${escHtml(home.name)}</b> (${escHtml(home.label||'')}). Reiser beregnes til oppgaver med dato, klokkeslett og sted, med ankomst til avtalt tid.<br>Kilder: Entur (Ruter sanntid og avvik), Open-Meteo (vær). Google Maps-lenkene åpner samme reise hos Google.`
+    : 'Ingen sted er markert som hjem. Velg et under Map → Lagrede steder.';
+  if (!home) { box.innerHTML = ''; return; }
+
+  const tasks = scheduledTasks().filter(t => t.date === date && (t.status==='active' || t.status==='in_progress'));
+  if (!tasks.length) {
+    box.innerHTML = '<div class="empty-state">INGEN OPPGAVER MED TID OG STED DENNE DAGEN</div>';
+    return;
+  }
+  if (force) { Object.keys(tripCache).forEach(k => delete tripCache[k]); }
+
+  // Chain the day: home -> task 1 -> task 2 ...
+  let prev = { name: home.name, lat: home.lat, lng: home.lng };
+  const legs = tasks.map(t => { const to = taskPoint(t); const leg = { t, from: prev, to }; prev = to; return leg; });
+
+  box.innerHTML = legs.map((l, i) => `<div class="travel-card" id="travel-${i}">
+      <div class="travel-head"><div class="travel-title">${l.t.time} · ${escHtml(l.t.text)}</div><span id="travel-wx-${i}"></span></div>
+      <div class="travel-route">${escHtml(l.from.name)} → ${escHtml(l.to.name)}</div>
+      <div class="travel-body" id="travel-body-${i}"><div style="font-size:11px;color:var(--pip-green-dim)">HENTER REISER...</div></div>
+    </div>`).join('');
+
+  let wxOk = true;
+  try { await getWeather(force); } catch(e) { wxOk = false; console.error('Weather failed', e); }
+
+  await Promise.all(legs.map(async (l, i) => {
+    const body = document.getElementById('travel-body-' + i);
+    const links = `<div class="travel-links">Google Maps:
+      <a href="${gmapsLink(l.from, l.to, 'transit')}" target="_blank" rel="noopener">kollektiv</a>
+      <a href="${gmapsLink(l.from, l.to, 'walking')}" target="_blank" rel="noopener">gange</a>
+      <a href="${gmapsLink(l.from, l.to, 'bicycling')}" target="_blank" rel="noopener">sykkel</a></div>`;
+    if (distM(l.from, l.to) < 60) {
+      body.innerHTML = '<div style="font-size:12px;color:var(--pip-green-dim)">Du er allerede her – ingen reise.</div>';
+      return;
+    }
+    const dt = osloIso(l.t.date, l.t.time);
+    const [transit, walk, bike] = await Promise.allSettled([
+      enturTrip(l.from, l.to, dt, { accessMode: 'foot', egressMode: 'foot', directMode: 'foot' }, 5),
+      enturTrip(l.from, l.to, dt, { directMode: 'foot', transportModes: [] }, 1),
+      enturTrip(l.from, l.to, dt, { directMode: 'bicycle', transportModes: [] }, 1),
+    ]);
+    if (run !== travelRun) return;
+    const fail = r => `<div style="color:var(--pip-red)">Kunne ikke hente (${escHtml(String(r.reason && r.reason.message || r.reason))})</div>`;
+    body.innerHTML =
+      `<div class="travel-row"><div class="travel-mode">Kollektiv</div><div class="travel-opts">${transit.status==='fulfilled' ? transitHtml(transit.value) : fail(transit)}</div></div>` +
+      `<div class="travel-row"><div class="travel-mode">Gange</div><div class="travel-opts">${walk.status==='fulfilled' ? directHtml(walk.value, 'gå') : fail(walk)}</div></div>` +
+      `<div class="travel-row"><div class="travel-mode">Sykkel</div><div class="travel-opts">${bike.status==='fulfilled' ? directHtml(bike.value, 'dra') : fail(bike)}</div></div>` +
+      links;
+
+    // Weather at the actual departure time of the first suggestion
+    if (wxOk) {
+      const firstTransit = transit.status==='fulfilled' ? transit.value.find(p => p.legs.some(x => x.line)) : null;
+      const firstWalk = walk.status==='fulfilled' ? walk.value[0] : null;
+      const dep = hm((firstTransit || firstWalk || {}).expectedStartTime);
+      const w = rainStatus(l.t, dep !== '--:--' ? dep : null);
+      document.getElementById('travel-wx-' + i).innerHTML = w
+        ? wxBadge(w) + ` <span style="font-size:10px;color:var(--pip-green-dim)">${w.changed ? 'Regn nå – var opphold sist du var ute (' + w.refTime + ')' : 'Regn ventet'}</span>`
+        : (rainAt(l.t.date, dep) === null ? '<span style="font-size:10px;color:var(--pip-green-dim)">ingen værdata</span>' : '');
+      if (w) wxWarnings[l.t.id] = w; else delete wxWarnings[l.t.id];
+    }
+  }));
+  if (run === travelRun) renderTasks();
+}
+
+// ==================== LANGUAGE (EN / NO) ====================
+// UI text is written once in the markup/code; this table maps English <-> Norwegian.
+// A MutationObserver translates everything that is rendered, so render functions stay unchanged.
+// Elements marked data-noi18n (your own titles, notes, place names) are never translated.
+const I18N = [
+  // Display controls & tabs
+  ['Dark', 'Mørk'], ['Med', 'Middels'], ['Light', 'Lys'], ['Medium', 'Middels'], ['Switch visual theme', 'Bytt visuelt tema'],
+  ['Home', 'Hjem'], ['Calendar', 'Kalender'], ['Deadlines', 'Frister'], ['Tasks', 'Oppgaver'], ['Map', 'Kart'], ['Log', 'Logg'],
+  // Home
+  ['// Goal of the Day', '// Dagens mål'], ['Goal', 'Mål'], ['Set Goal', 'Sett mål'], ['Link tasks (ctrl/cmd-click, max 3)', 'Koble oppgaver (ctrl/cmd-klikk, maks 3)'],
+  ["What's the mission today?", 'Hva er dagens oppdrag?'], ['// Urgent Deadlines', '// Viktige frister'], ['NO URGENT DEADLINES', 'INGEN VIKTIGE FRISTER'],
+  ['// Rolling 7-Day Averages', '// Snitt siste 7 dager'], ['Avg Sleep', 'Snitt søvn'], ['Avg Bedtime', 'Snitt leggetid'], ['Avg Wake', 'Snitt våkne'],
+  ['Avg Screen', 'Snitt skjerm'], ['Avg Social', 'Snitt sosiale medier'], ['Tasks Done', 'Fullførte oppgaver'],
+  ['active', 'aktive'], ['total tasks', 'oppgaver totalt'], ['days', 'dager'], ['day', 'dag'], ['remaining', 'igjen'], ['OVERDUE', 'FORFALT'], ['min', 'min'],
+  ['date not known', 'dato ikke kjent'], ['Date not known', 'Dato ikke kjent'],
+  // Calendar
+  ['Today', 'I dag'], ['today', 'i dag'], ['Month', 'Måned'], ['Connect Google', 'Koble til Google'], ['Refresh Google', 'Oppdater Google'], ['Reconnect Google', 'Koble til Google på nytt'],
+  ['NOTHING PLANNED', 'INGENTING PLANLAGT'], ['NOTHING IN THE NEXT 30 DAYS', 'INGENTING DE NESTE 30 DAGENE'], ['Task this day', 'Oppgave denne dagen'],
+  ['all day', 'hele dagen'], ['open', 'åpne'], ['Task', 'Oppgave'], ['Deadline', 'Frist'], ['Send to Google Calendar', 'Send til Google Kalender'], ['events', 'hendelser'],
+  ['Google Calendar works from the GitHub Pages address.', 'Google Kalender fungerer fra GitHub Pages-adressen.'],
+  ['Google Calendar is not set up yet (Log → Data).', 'Google Kalender er ikke satt opp ennå (Logg → Data).'],
+  ['Google Calendar connected', 'Google Kalender tilkoblet'], ['Google session expired – click Reconnect.', 'Google-økten er utløpt – trykk Koble til på nytt.'],
+  ['Not connected to Google.', 'Ikke koblet til Google.'],
+  // Deadlines
+  ['Add Deadline', 'Ny frist'], ['Edit Deadline', 'Rediger frist'], ['Title', 'Tittel'], ['Due Date (empty = not known yet)', 'Frist (tom = ikke kjent ennå)'],
+  ['Time (optional)', 'Tid (valgfritt)'], ['Priority', 'Prioritet'], ['Normal', 'Normal'], ['High', 'Høy'], ['Urgent', 'Haster'], ['Low', 'Lav'],
+  ['Save', 'Lagre'], ['Cancel', 'Avbryt'], ['// Active Deadlines', '// Aktive frister'], ['NO DEADLINES SET', 'INGEN FRISTER'], ['Deadline name', 'Navn på frist'],
+  ['[edit]', '[endre]'], ['Total', 'Totalt'], ['Active', 'Aktiv'],
+  // Tasks
+  ['All Tasks', 'Alle oppgaver'], ['Travel plan', 'Reiseplan'], ['Add Task', 'Ny oppgave'], ['Edit Task', 'Rediger oppgave'], ['Description', 'Beskrivelse'],
+  ['Group', 'Gruppe'], ['No group', 'Ingen gruppe'], ['+ New group...', '+ Ny gruppe...'], ['★ Important', '★ Viktig'], ['Important', 'Viktig'],
+  ['+ New deadline', '+ Ny frist'], ['Create deadline', 'Opprett frist'], ['Place / Area', 'Sted / område'], ['None', 'Ingen'],
+  ['Address (optional)', 'Adresse (valgfritt)'], ['Find', 'Søk'], ['Date', 'Dato'], ['Time', 'Tid'], ['Subtasks', 'Delmål'], ['Add a step', 'Legg til et delmål'],
+  ['What needs doing?', 'Hva skal gjøres?'], ['Details, notes, links', 'Detaljer, notater, lenker'], ['Search address', 'Søk adresse'], ['Areas', 'Områder'],
+  ['// All Tasks', '// Alle oppgaver'], ['All', 'Alle'], ['Open', 'Åpne'], ['In Progress', 'Pågår'], ['Finished', 'Fullført'], ['Discarded', 'Forkastet'],
+  ['All groups', 'Alle grupper'], ['Ungrouped', 'Uten gruppe'], ['in progress', 'pågår'], ['finished', 'fullført'], ['discarded', 'forkastet'],
+  ['Start', 'Start'], ['Done', 'Ferdig'], ['Drop', 'Dropp'], ['NO TASKS', 'INGEN OPPGAVER'], ['d', 'd'],
+  ['Name of the new group:', 'Navn på den nye gruppen:'], ['Delete group', 'Slette gruppen'], ['Its tasks are kept, without a group.', 'Oppgavene beholdes, uten gruppe.'],
+  ['// Easy-fix — Quick Tasks (Under 5 Min)', '// Easy-fix — kjappe oppgaver (under 5 min)'], ['Quick Task', 'Kjapp oppgave'], ['Add', 'Legg til'],
+  ['Quick thing to knock out', 'Noe kjapt å få unna'], ['// Easy-fix Tasks', '// Easy-fix-oppgaver'], ['Status', 'Status'], ['Loc', 'Sted'], ['NO EASY-FIX TASKS', 'INGEN EASY-FIX-OPPGAVER'],
+  // Travel planner (written in Norwegian in the code)
+  ['// Travel plan', '// Reiseplan'], ['Day', 'Dag'], ['Update', 'Oppdater'], ['Transit', 'Kollektiv'], ['Walking', 'Gange'], ['Bike', 'Sykkel'],
+  ['transit', 'kollektiv'], ['walking', 'gange'], ['cycling', 'sykkel'], ['FETCHING ROUTES...', 'HENTER REISER...'], ['Rain expected', 'Regn ventet'],
+  ['no weather data', 'ingen værdata'], ['NO TASKS WITH A TIME AND PLACE THIS DAY', 'INGEN OPPGAVER MED TID OG STED DENNE DAGEN'],
+  ["You're already here – no trip.", 'Du er allerede her – ingen reise.'], ['No route found.', 'Fant ingen rute.'],
+  ['No transit connection – walk or bike.', 'Ingen kollektivforbindelse – gå eller sykle.'],
+  // Map
+  ['// Oslo Task Map', '// Oslo-kart'], ['Map Style', 'Kartstil'], ['Auto (follow theme)', 'Auto (følg tema)'], ['Map Brightness', 'Kartlysstyrke'], ['Reset', 'Tilbakestill'],
+  ['Road colours', 'Veifarger'], ['Motorway', 'Motorvei'], ['Car road', 'Bilvei'], ['Bike path', 'Sykkelvei'], ['Footpath', 'Gangvei'], ['Trail', 'Sti'], ['Coastline', 'Kystlinje'],
+  ['Active tasks', 'Aktive'], ['Finished tasks', 'Ferdig'], ['Address / place', 'Adresse / sted'], ['Saved place', 'Lagret sted'],
+  ['// Map API Key Required', '// Kart-API-nøkkel trengs'], ['This map uses MapTiler vector tiles for street-level detail. Get a free API key (100k loads/mo) and paste it below.', 'Kartet bruker MapTiler for detaljerte gatekart. Lag en gratis API-nøkkel (100 000 visninger/mnd) og lim den inn under.'],
+  ['Set "Allowed HTTP origins" to', 'Sett «Allowed HTTP origins» til'], ['(wildcard) for local file access.', '(jokertegn) for tilgang fra lokal fil.'], ['Activate', 'Aktiver'],
+  ['Your MapTiler API key', 'Din MapTiler API-nøkkel'],
+  ['// Saved places', '// Lagrede steder'], ['Name', 'Navn'], ['Address', 'Adresse'], ['Save place', 'Lagre sted'], ['Place', 'Sted'], ['e.g. Work', 'F.eks. Jobb'],
+  ['NO SAVED PLACES YET. IMPORT personlige-data.json UNDER LOG → DATA, OR ADD HOME ABOVE.', 'INGEN LAGREDE STEDER ENNÅ. IMPORTER personlige-data.json UNDER LOGG → DATA, ELLER LEGG TIL HJEMME OVER.'],
+  ['// Tasks by Location', '// Oppgaver per sted'], ['NO TASKS WITH LOCATIONS', 'INGEN OPPGAVER MED STED'], ['Show on map', 'Vis på kart'],
+  // Log
+  ['Last 7 Days', 'Siste 7 dager'], ['Last 30 Days', 'Siste 30 dager'], ['Prev Week', 'Forrige uke'], ['Prev Month', 'Forrige måned'],
+  ['Sleep', 'Søvn'], ['Screen Time', 'Skjermtid'], ['All Entries / Data', 'Alle oppføringer / data'], ['Log Sleep Entry', 'Logg søvn'], ['Edit Sleep Entry', 'Rediger søvn'],
+  ['Bedtime', 'Leggetid'], ['Wake Time', 'Våknetid'], ['Est. Hours', 'Ant. timer'], ['auto -15min', 'auto -15 min'], ['Update', 'Oppdater'],
+  ['// Sleep Overview —', '// Søvnoversikt —'], ['Total Sleep', 'Total søvn'], ['Entries', 'Oppføringer'], ['// Sleep Duration Chart', '// Søvnlengde'], ['NO DATA', 'INGEN DATA'],
+  ['Log Screen Time', 'Logg skjermtid'], ['Edit Screen Time', 'Rediger skjermtid'], ['Total (hrs)', 'Totalt (timer)'], ['Social (hrs)', 'Sosiale medier (timer)'],
+  ['e.g. 4.5', 'f.eks. 4,5'], ['e.g. 1.5', 'f.eks. 1,5'],
+  ['// Screen Time Overview —', '// Skjermtidsoversikt —'], ['Avg Total', 'Snitt totalt'], ['Total Screen', 'Total skjermtid'], ['Total Social', 'Totalt sosiale medier'],
+  ['Social %', 'Sosiale medier %'], ['// Daily Screen Time', '// Skjermtid per dag'], ['// All Entries —', '// Alle oppføringer —'], ['SLEEP LOG', 'SØVNLOGG'],
+  ['Wake', 'Våkne'], ['Hours', 'Timer'], ['NO SLEEP ENTRIES IN RANGE', 'INGEN SØVNDATA I PERIODEN'], ['SCREEN TIME LOG', 'SKJERMTIDSLOGG'], ['Social', 'Sosiale medier'],
+  ['NO SCREEN ENTRIES IN RANGE', 'INGEN SKJERMTID I PERIODEN'], ['Export JSON', 'Eksporter JSON'], ['Import JSON', 'Importer JSON'], ['Purge All', 'Slett alt'],
+  // Sync & connections
+  ['// Sync & Connections', '// Synk og tilkoblinger'], ['Sync between phone and laptop (GitHub Gist).', 'Synk mellom telefon og laptop (GitHub Gist).'],
+  ['Your data is saved to a secret gist on your GitHub account, and every device with the token sees the same data. Create a token at', 'Dataene lagres i en hemmelig gist på GitHub-kontoen din, og alle enheter med tokenet ser de samme dataene. Lag et token på'],
+  [': under Account permissions, set "Gists" to "Read and write". Paste it here once on each device.', ': under «Account permissions», sett «Gists» til «Read and write». Lim det inn her én gang per enhet.'],
+  ['GitHub token', 'GitHub-token'], ['Connect sync', 'Koble til synk'], ['Sync now', 'Synk nå'], ['Disconnect', 'Koble fra'],
+  ['Sync is off: data is only on this device.', 'Synk er av: dataene finnes bare på denne enheten.'], ['Sync on', 'Synk på'], ['last synced', 'sist synket'], ['Connecting...', 'Kobler til...'],
+  ['Google Calendar.', 'Google Kalender.'],
+  ['Works from the GitHub Pages address, not from a local file. One-time setup: in', 'Fungerer fra GitHub Pages-adressen, ikke fra lokal fil. Engangsoppsett: i'],
+  ['create a project, enable "Google Calendar API", set up the OAuth consent screen (External, add yourself as test user), and create an OAuth Client ID of type "Web application" with this site\'s address as an Authorized JavaScript origin. Paste the Client ID here.', 'lag et prosjekt, aktiver «Google Calendar API», sett opp OAuth consent screen (External, legg deg selv til som testbruker), og lag en OAuth Client ID av typen «Web application» med denne sidens adresse som «Authorized JavaScript origin». Lim inn Client ID her.'],
+  ['MapTiler key', 'MapTiler-nøkkel'],
+  ['Synced data found. OK = load it on this device (replaces the data here). Cancel = keep the data on this device and upload it.', 'Fant synkede data. OK = hent dem til denne enheten (erstatter dataene her). Avbryt = behold dataene på denne enheten og last dem opp.'],
+  ['Stop syncing on this device? The data stays in the gist and on this device.', 'Slutte å synke på denne enheten? Dataene blir liggende i gisten og på denne enheten.'],
+  // Toasts
+  ['ADD YOUR GOOGLE CLIENT ID UNDER LOG → DATA', 'LEGG INN GOOGLE CLIENT ID UNDER LOGG → DATA'], ['ALL DATA PURGED', 'ALLE DATA SLETTET'],
+  ['COULD NOT LOAD GOOGLE SIGN-IN', 'KUNNE IKKE LASTE GOOGLE-INNLOGGING'], ['DATA EXPORTED', 'DATA EKSPORTERT'], ['DATA IMPORTED', 'DATA IMPORTERT'],
+  ['DEADLINE ADDED', 'FRIST LAGT TIL'], ['DEADLINE UPDATED', 'FRIST OPPDATERT'], ['ENTER A TASK', 'SKRIV INN EN OPPGAVE'], ['ENTER AN ADDRESS', 'SKRIV INN EN ADRESSE'],
+  ['ENTER AN API KEY', 'SKRIV INN EN API-NØKKEL'], ['FILL IN A TITLE', 'FYLL INN EN TITTEL'], ['FILL IN DATE AND TOTAL', 'FYLL INN DATO OG TOTAL'],
+  ['FILL IN DATE, BEDTIME, AND WAKE TIME', 'FYLL INN DATO, LEGGETID OG VÅKNETID'], ['GIVE THE PLACE A NAME', 'GI STEDET ET NAVN'], ['GOAL SET', 'MÅL SATT'],
+  ['GOOGLE CALENDAR CONNECTED', 'GOOGLE KALENDER TILKOBLET'], ['GOOGLE CALENDAR ONLY WORKS FROM THE WEB ADDRESS (GITHUB PAGES)', 'GOOGLE KALENDER FUNGERER BARE FRA NETTADRESSEN (GITHUB PAGES)'],
+  ['GOOGLE DISCONNECTED', 'GOOGLE FRAKOBLET'], ['HOME UPDATED', 'HJEM OPPDATERT'], ['IMPORT FAILED', 'IMPORT FEILET'], ['MAP NOT LOADED', 'KARTET ER IKKE LASTET'],
+  ['MAP FAILED TO LOAD — CHECK API KEY', 'KARTET KUNNE IKKE LASTES — SJEKK API-NØKKELEN'], ['MAP KEY SAVED', 'KARTNØKKEL LAGRET'], ['NEEDS A DATE FIRST', 'TRENGER EN DATO FØRST'],
+  ['PASTE A GITHUB TOKEN FIRST', 'LIM INN ET GITHUB-TOKEN FØRST'], ['PICK A DATE FOR THE TIME', 'VELG DATO FOR KLOKKESLETTET'], ['QUICK TASK ADDED', 'KJAPP OPPGAVE LAGT TIL'],
+  ['SAVED', 'LAGRET'], ['SCREEN TIME LOGGED', 'SKJERMTID LOGGET'], ['SCREEN TIME UPDATED', 'SKJERMTID OPPDATERT'], ['SENT TO GOOGLE CALENDAR', 'SENDT TIL GOOGLE KALENDER'],
+  ['SET A GOAL OR SELECT TASKS', 'SETT ET MÅL ELLER VELG OPPGAVER'], ['SLEEP ENTRY LOGGED', 'SØVN LOGGET'], ['SLEEP ENTRY UPDATED', 'SØVN OPPDATERT'],
+  ['PLACE SAVED', 'STED LAGRET'], ['SYNC CONNECTED', 'SYNK TILKOBLET'], ['SYNC FAILED', 'SYNK FEILET'], ['SYNC IS NOT CONNECTED', 'SYNK ER IKKE TILKOBLET'],
+  ['SYNCED FROM CLOUD', 'HENTET FRA SKYEN'], ['SYNCED', 'SYNKET'], ['SEARCH AND PICK AN ADDRESS', 'SØK OG VELG EN ADRESSE'], ['TASK ADDED', 'OPPGAVE LAGT TIL'],
+  ['TASK UPDATED', 'OPPGAVE OPPDATERT'], ['THAT DOES NOT LOOK LIKE A GOOGLE CLIENT ID', 'DET SER IKKE UT SOM EN GOOGLE CLIENT ID'],
+  ['SEARCHING...', 'SØKER...'], ['NO MATCHES', 'INGEN TREFF'], ['SEARCH FAILED — CHECK CONNECTION', 'SØK FEILET — SJEKK NETTVERKET'],
+  ['Saved places', 'Lagrede steder'],
+];
+const I18N_TO_NO = new Map(), I18N_TO_EN = new Map();
+I18N.forEach(([en, no]) => { if (!I18N_TO_NO.has(en)) I18N_TO_NO.set(en, no); if (!I18N_TO_EN.has(no)) I18N_TO_EN.set(no, en); });
+let lang = (() => { const l = lsGet('pipboy_lang'); return l === 'en' ? 'en' : 'no'; })();
+
+function tr(str) {
+  if (str == null) return str;
+  const m = lang === 'no' ? I18N_TO_NO : I18N_TO_EN;
+  return m.has(str) ? m.get(str) : str;
+}
+
+function trText(node) {
+  const v = node.nodeValue; if (!v || !v.trim()) return;
+  const p = node.parentElement;
+  if (!p || p.closest('[data-noi18n],script,style,textarea')) return;
+  const core = v.trim(), out = tr(core);
+  if (out !== core) node.nodeValue = v.replace(core, out);
+}
+function trAttrs(el) {
+  if (el.closest && el.closest('[data-noi18n]')) return;
+  ['placeholder', 'title', 'label'].forEach(a => {
+    const v = el.getAttribute && el.getAttribute(a);
+    if (v) { const out = tr(v); if (out !== v) el.setAttribute(a, out); }
+  });
+}
+function translateTree(root) {
+  if (root.nodeType === 3) { trText(root); return; }
+  if (root.nodeType !== 1) return;
+  trAttrs(root);
+  root.querySelectorAll('[placeholder],[title],optgroup[label]').forEach(trAttrs);
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let n; while ((n = w.nextNode())) trText(n);
+}
+
+function setLang(l) {
+  lang = l === 'en' ? 'en' : 'no';
+  lsSet('pipboy_lang', lang);
+  document.documentElement.lang = lang === 'no' ? 'nb' : 'en';
+  document.querySelectorAll('.display-controls [data-lang]').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  translateTree(document.body);
+  updateDateDisplay();
+  render();
+}
+
+function initLang() {
+  document.documentElement.lang = lang === 'no' ? 'nb' : 'en';
+  document.querySelectorAll('.display-controls [data-lang]').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  translateTree(document.body);
+  new MutationObserver(muts => muts.forEach(m => m.addedNodes.forEach(translateTree)))
+    .observe(document.body, { childList: true, subtree: true });
+}
+
+// ==================== DATE HELPERS (calendar) ====================
+function addDays(dateStr, n) { const d = new Date(dateStr + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function weekdayIdx(dateStr) { return (new Date(dateStr + 'T00:00:00Z').getUTCDay() + 6) % 7; } // Monday = 0
+function addMinutes(date, time, m) { const d = new Date(date + 'T' + time + ':00Z'); d.setUTCMinutes(d.getUTCMinutes() + m); const iso = d.toISOString(); return { date: iso.slice(0, 10), time: iso.slice(11, 16) }; }
+function locale() { return lang === 'no' ? 'nb-NO' : 'en-GB'; }
+function fmtDay(dateStr, opts) { return new Date(dateStr + 'T12:00:00Z').toLocaleDateString(locale(), { timeZone: 'UTC', ...opts }); }
+function osloParts(isoDateTime) { const s = new Date(isoDateTime).toLocaleString('sv-SE', { timeZone: 'Europe/Oslo' }); return { date: s.slice(0, 10), time: s.slice(11, 16) }; }
+
+// ==================== CALENDAR ====================
+let calView = lsGet('pipboy_calview') === 'agenda' ? 'agenda' : 'month';
+let calMonth = todayStr().slice(0, 7);   // 'YYYY-MM'
+let calSel = todayStr();
+
+function setCalView(v) { calView = v; lsSet('pipboy_calview', v); renderCalendar(); }
+function calMove(n) {
+  if (calView === 'month') { const d = new Date(calMonth + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); calMonth = d.toISOString().slice(0, 7); }
+  else { calSel = addDays(calSel, n * 14); calMonth = calSel.slice(0, 7); }
+  renderCalendar();
+}
+function calToday() { calSel = todayStr(); calMonth = calSel.slice(0, 7); renderCalendar(); }
+function calPick(d) { calSel = d; if (d.slice(0, 7) !== calMonth && calView === 'month') calMonth = d.slice(0, 7); renderCalendar(); }
+
+function calRange() {
+  if (calView === 'month') { const first = calMonth + '-01'; const start = addDays(first, -weekdayIdx(first)); return { from: start, to: addDays(start, 41) }; }
+  return { from: calSel, to: addDays(calSel, 29) };
+}
+
+// Everything that has a date: deadlines, tasks and (when connected) Google events
+function calItems(from, to) {
+  const out = [];
+  const inR = d => d && d >= from && d <= to;
+  S.deadlines.forEach(d => { if (inR(d.date)) out.push({ kind: 'dl', id: d.id, date: d.date, time: d.time || '', title: d.title, pri: d.priority, gcalId: d.gcalId }); });
+  S.tasks.forEach(t => { if (inR(t.date) && t.status !== 'discarded') out.push({ kind: 'task', id: t.id, date: t.date, time: t.time || '', title: t.text, status: t.status, gcalId: t.gcalId }); });
+  const linked = new Set([...S.deadlines, ...S.tasks].map(x => x.gcalId).filter(Boolean));
+  gcalEvents.forEach(ev => { if (!linked.has(ev.id)) ev.days.forEach(d => { if (inR(d)) out.push({ kind: 'g', id: ev.id, date: d, time: ev.allDay ? '' : ev.time, title: ev.title, link: ev.link }); }); });
+  return out.sort((a, b) => (a.date + (a.time || '00:00')).localeCompare(b.date + (b.time || '00:00')));
+}
+
+function renderCalendar() {
+  const body = document.getElementById('calBody'); if (!body) return;
+  document.querySelectorAll('[data-calview]').forEach(b => b.classList.toggle('active', b.dataset.calview === calView));
+  const { from, to } = calRange();
+  ensureGcalRange(from, to);
+  const items = calItems(from, to);
+  const byDate = {}; items.forEach(it => { (byDate[it.date] = byDate[it.date] || []).push(it); });
+  const today = todayStr();
+
+  if (calView === 'month') {
+    document.getElementById('calTitle').textContent = fmtDay(calMonth + '-15', { month: 'long', year: 'numeric' });
+    const dows = [...Array(7)].map((_, i) => `<div class="cal-dow">${fmtDay(addDays('2024-01-01', i), { weekday: 'short' })}</div>`).join('');
+    let cells = '';
+    for (let i = 0; i < 42; i++) {
+      const d = addDays(from, i), its = byDate[d] || [];
+      const cls = ['cal-cell', d.slice(0, 7) !== calMonth ? 'other' : '', d === today ? 'today' : '', d === calSel ? 'sel' : ''].join(' ');
+      cells += `<div class="${cls}" onclick="calPick('${d}')">
+        <div class="cal-num">${+d.slice(8)}</div>
+        ${its.slice(0, 3).map(it => `<div class="cal-item k-${it.kind} ${it.kind === 'dl' && it.pri === 'urgent' ? 'pri-urgent-b' : ''}" data-noi18n title="${escHtml(it.title)}">${it.time ? it.time + ' ' : ''}${escHtml(it.title)}</div>`).join('')}
+        ${its.length > 3 ? `<div class="cal-more">+${its.length - 3}</div>` : ''}
+        <div class="cal-dots">${its.slice(0, 6).map(it => `<span class="cal-dot k-${it.kind}"></span>`).join('')}</div>
+      </div>`;
+    }
+    body.innerHTML = `<div class="cal-grid">${dows}${cells}</div>`;
+  } else {
+    document.getElementById('calTitle').textContent = fmtDay(from, { day: 'numeric', month: 'short' }) + ' – ' + fmtDay(to, { day: 'numeric', month: 'short', year: 'numeric' });
+    const days = Object.keys(byDate).sort();
+    body.innerHTML = days.length ? days.map(d => `<div class="cal-agenda-day" onclick="calPick('${d}')" style="cursor:pointer">${fmtDay(d, { weekday: 'long', day: 'numeric', month: 'long' })}${d === today ? ' · ' + tr('today') : ''}</div>` + byDate[d].map(calItemHtml).join('')).join('')
+      : `<div class="empty-state">${tr('NOTHING IN THE NEXT 30 DAYS')}</div>`;
+  }
+
+  // Selected day
+  document.getElementById('calDayTitle').textContent = fmtDay(calSel, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const dayItems = calItems(calSel, calSel);
+  document.getElementById('calDayList').innerHTML = (dayItems.length ? dayItems.map(calItemHtml).join('') : `<div class="empty-state" style="padding:10px">${tr('NOTHING PLANNED')}</div>`) +
+    `<button class="pip-btn sm" style="margin-top:8px" onclick="newTaskOn('${calSel}')">+ ${tr('Task this day')}</button>`;
+
+  // Google connection status
+  const st = calStatusText();
+  document.getElementById('gcalStatus').innerHTML = st;
+  const btn = document.getElementById('gcalBtn');
+  btn.textContent = tr(gcalConnected() ? 'Refresh Google' : (gcalToken ? 'Reconnect Google' : 'Connect Google'));
+  btn.onclick = gcalConnected() ? () => { gcalLoadedRange = ''; renderCalendar(); } : gcalConnect;
+}
+
+function calItemHtml(it) {
+  const kindLabel = { dl: tr('Deadline'), task: tr('Task'), g: 'Google' }[it.kind];
+  let actions = '';
+  if (it.kind === 'task') actions = `<button class="act-btn" onclick="editTask('${it.id}')">[e]</button>`;
+  if (it.kind === 'dl') actions = `<button class="act-btn" onclick="editDeadline('${it.id}')">[e]</button>`;
+  if (it.kind !== 'g' && gcalConnected()) actions += `<button class="act-btn" onclick="gcalPush('${it.kind}','${it.id}')" title="${tr('Send to Google Calendar')}">${it.gcalId ? '&#8635;' : '&rarr;'} G</button>`;
+  if (it.kind === 'g' && it.link && /^https:\/\/(www|calendar)\.google\.com\//.test(it.link)) actions = `<a class="act-btn" href="${escHtml(it.link)}" target="_blank" rel="noopener">${tr('open')}</a>`;
+  const pri = it.kind === 'dl' ? 'pri-' + it.pri : '';
+  return `<div class="cal-day-item">
+    <div class="when">${it.time || tr('all day')}</div>
+    <div class="what"><div class="${pri}" data-noi18n>${escHtml(it.title)}</div><div class="kind">${kindLabel}${it.kind === 'task' && it.status !== 'active' ? ' · ' + tr(it.status.replace('_', ' ')) : ''}</div></div>
+    <div>${actions}</div></div>`;
+}
+
+// ==================== GOOGLE CALENDAR (two-way) ====================
+// Google Identity Services token flow: no server, the token lives ~1 hour in this browser.
+// Needs an OAuth Client ID (Log -> Data) and an https origin (GitHub Pages), not file://.
+const GIS_URL = 'https://accounts.google.com/gsi/client';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+const GCAL_TOKEN_KEY = 'pipboy_gcal_token';
+let gcalToken = (() => { try { return JSON.parse(lsGet(GCAL_TOKEN_KEY) || 'null'); } catch (e) { return null; } })();
+let gcalTokenClient = null;
+let gcalEvents = [];
+let gcalLoadedRange = '';
+let gcalError = '';
+
+function gcalClientId() { return (S.settings && S.settings.googleClientId) || ''; }
+function gcalConnected() { return !!(gcalToken && gcalToken.exp > Date.now() + 30000); }
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { if (window.google && google.accounts) return res(); }
+    const el = document.createElement('script'); el.src = src; el.async = true;
+    el.onload = () => res(); el.onerror = () => rej(new Error('load failed'));
+    document.head.appendChild(el);
+  });
+}
+
+function saveGcalClientId() {
+  const v = document.getElementById('gcalClientInput').value.trim();
+  if (!/\.apps\.googleusercontent\.com$/.test(v)) { toast('THAT DOES NOT LOOK LIKE A GOOGLE CLIENT ID'); return; }
+  S.settings.googleClientId = v; gcalTokenClient = null; save(); render(); toast('SAVED');
+}
+
+async function gcalConnect() {
+  if (location.protocol === 'file:') { toast('GOOGLE CALENDAR ONLY WORKS FROM THE WEB ADDRESS (GITHUB PAGES)'); return; }
+  const cid = gcalClientId();
+  if (!cid) { toast('ADD YOUR GOOGLE CLIENT ID UNDER LOG → DATA'); switchSection('log', 'data'); return; }
+  try { await loadScript(GIS_URL); } catch (e) { toast('COULD NOT LOAD GOOGLE SIGN-IN'); return; }
+  if (!gcalTokenClient || gcalTokenClient._cid !== cid) {
+    gcalTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: cid, scope: GCAL_SCOPE,
+      callback: r => {
+        if (r.error) { gcalError = r.error; toast('GOOGLE: ' + r.error); render(); return; }
+        gcalToken = { t: r.access_token, exp: Date.now() + (r.expires_in || 3600) * 1000 };
+        lsSet(GCAL_TOKEN_KEY, JSON.stringify(gcalToken)); lsSet('pipboy_gcal_consented', '1');
+        gcalError = ''; gcalLoadedRange = '';
+        toast('GOOGLE CALENDAR CONNECTED'); render();
+      },
+    });
+    gcalTokenClient._cid = cid;
+  }
+  gcalTokenClient.requestAccessToken({ prompt: lsGet('pipboy_gcal_consented') ? '' : 'consent' });
+}
+
+function gcalDisconnect() {
+  if (gcalToken && window.google && google.accounts) { try { google.accounts.oauth2.revoke(gcalToken.t, () => {}); } catch (e) {} }
+  gcalToken = null; gcalEvents = []; gcalLoadedRange = '';
+  try { localStorage.removeItem(GCAL_TOKEN_KEY); localStorage.removeItem('pipboy_gcal_consented'); } catch (e) {}
+  render(); toast('GOOGLE DISCONNECTED');
+}
+
+async function gcalApi(path, opts = {}) {
+  const res = await fetch('https://www.googleapis.com/calendar/v3' + path, {
+    ...opts, headers: { Authorization: 'Bearer ' + gcalToken.t, 'Content-Type': 'application/json' },
+  });
+  if (res.status === 401) { gcalToken = null; try { localStorage.removeItem(GCAL_TOKEN_KEY); } catch (e) {} render(); throw new Error('session expired – reconnect'); }
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.status === 204 ? null : res.json();
+}
+
+function ensureGcalRange(from, to) {
+  if (!gcalConnected()) return;
+  const key = from + '/' + to;
+  if (gcalLoadedRange === key) return;
+  gcalLoadedRange = key;
+  const q = new URLSearchParams({ timeMin: osloIso(from, '00:00'), timeMax: osloIso(addDays(to, 1), '00:00'), singleEvents: 'true', orderBy: 'startTime', maxResults: '250' });
+  gcalApi('/calendars/primary/events?' + q).then(d => {
+    gcalEvents = (d.items || []).filter(ev => ev.status !== 'cancelled').map(ev => {
+      const allDay = !!(ev.start && ev.start.date);
+      let start, end, time = '';
+      if (allDay) { start = ev.start.date; end = addDays(ev.end.date, -1); }
+      else { const sp = osloParts(ev.start.dateTime), ep = osloParts(ev.end.dateTime); start = sp.date; end = ep.date; time = sp.time; }
+      const days = []; for (let d = start, i = 0; d <= end && i < 14; d = addDays(d, 1), i++) days.push(d);
+      return { id: ev.id, title: ev.summary || '(no title)', allDay, time, days, link: ev.htmlLink };
+    });
+    gcalError = '';
+    renderCalendar();
+  }).catch(e => { gcalError = e.message; gcalLoadedRange = ''; renderCalendar(); });
+}
+
+async function gcalPush(kind, id) {
+  if (!gcalConnected()) { gcalConnect(); return; }
+  const item = kind === 'dl' ? getDeadline(id) : S.tasks.find(t => t.id === id);
+  if (!item) return;
+  if (!item.date) { toast('NEEDS A DATE FIRST'); return; }
+  const isDl = kind === 'dl';
+  const body = { summary: isDl ? item.title : item.text };
+  if (!isDl) {
+    body.description = [item.desc || '', ...(item.steps || []).map(st => (st.done ? '☑ ' : '☐ ') + st.text)].filter(Boolean).join('\n');
+    const pl = item.placeId ? getPlace(item.placeId) : null;
+    const loc = item.geo ? item.geo.label : pl ? pl.label : item.location;
+    if (loc) body.location = loc;
+  } else if (!item.gcalId) {
+    body.description = tr('Deadline') + ' · ' + tr('Priority') + ': ' + item.priority;
+  }
+  if (item.time) {
+    const end = addMinutes(item.date, item.time, 60);
+    body.start = { dateTime: osloIso(item.date, item.time), timeZone: 'Europe/Oslo' };
+    body.end = { dateTime: osloIso(end.date, end.time), timeZone: 'Europe/Oslo' };
+  } else {
+    body.start = { date: item.date }; body.end = { date: addDays(item.date, 1) };
+  }
+  try {
+    let ev = null;
+    if (item.gcalId) {
+      try { ev = await gcalApi('/calendars/primary/events/' + encodeURIComponent(item.gcalId), { method: 'PATCH', body: JSON.stringify(body) }); }
+      catch (e) { if (!/HTTP (404|410)/.test(e.message)) throw e; }
+    }
+    if (!ev) ev = await gcalApi('/calendars/primary/events', { method: 'POST', body: JSON.stringify(body) });
+    item.gcalId = ev.id; save();
+    gcalLoadedRange = ''; render();
+    toast('SENT TO GOOGLE CALENDAR');
+  } catch (e) { toast('GOOGLE: ' + e.message); }
+}
+
+function calStatusText() {
+  if (location.protocol === 'file:') return tr('Google Calendar works from the GitHub Pages address.');
+  if (!gcalClientId()) return tr('Google Calendar is not set up yet (Log → Data).');
+  if (gcalError) return '<span style="color:var(--pip-red)">Google: ' + escHtml(gcalError) + '</span>';
+  if (gcalConnected()) return '<span class="ok">' + tr('Google Calendar connected') + ' · ' + gcalEvents.length + ' ' + tr('events') + '</span>';
+  return tr(gcalToken ? 'Google session expired – click Reconnect.' : 'Not connected to Google.');
+}
+
+// ==================== SYNC (GitHub Gist) ====================
+// The whole data object is stored as one JSON file in a secret gist. Last write wins,
+// decided by meta.updatedAt. Pull on start, when the tab becomes visible and every 3 min;
+// push 2 s after every change.
+const GIST_FILE = 'pipboy-data.json';
+const GIST_TOKEN_KEY = 'pipboy_gist_token';
+const GIST_ID_KEY = 'pipboy_gist_id';
+let syncTimer = null, lastSyncAt = 0, syncErr = '', syncBusy = false;
+
+function syncConfigured() { return !!(lsGet(GIST_TOKEN_KEY) && lsGet(GIST_ID_KEY)); }
+
+async function ghApi(path, opts = {}) {
+  const res = await fetch('https://api.github.com' + path, {
+    ...opts,
+    headers: { Authorization: 'Bearer ' + lsGet(GIST_TOKEN_KEY), Accept: 'application/vnd.github+json', ...(opts.body ? { 'Content-Type': 'application/json' } : {}) },
+  });
+  if (!res.ok) throw new Error('GitHub HTTP ' + res.status + (res.status === 401 ? ' (token)' : ''));
+  return res.json();
+}
+
+async function syncFetchRemote(id) {
+  const g = await ghApi('/gists/' + id);
+  const f = g.files && g.files[GIST_FILE];
+  if (!f) return null;
+  const content = f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
+  return JSON.parse(content);
+}
+
+function hasLocalData() { return !!(S.tasks.length || S.deadlines.length || S.sleep.length || S.screen.length || S.places.length); }
+
+function applyRemote(remote) {
+  _applyingRemote = true;
+  try {
+    S = normalizeState(remote);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(S));
+  } finally { _applyingRemote = false; }
+  render(); refreshWeatherWarnings();
+}
+
+async function syncConnect() {
+  const tok = document.getElementById('gistTokenInput').value.trim();
+  if (tok) lsSet(GIST_TOKEN_KEY, tok);
+  if (!lsGet(GIST_TOKEN_KEY)) { toast('PASTE A GITHUB TOKEN FIRST'); return; }
+  syncErr = ''; setSyncStatus(tr('Connecting...'));
+  try {
+    await ghApi('/user');
+    let id = lsGet(GIST_ID_KEY);
+    if (!id) {
+      const gists = await ghApi('/gists?per_page=100');
+      const found = gists.find(g => g.files && g.files[GIST_FILE]);
+      if (found) id = found.id;
+    }
+    if (id) {
+      lsSet(GIST_ID_KEY, id);
+      const remote = await syncFetchRemote(id);
+      if (remote && (!hasLocalData() || confirm(tr('Synced data found. OK = load it on this device (replaces the data here). Cancel = keep the data on this device and upload it.')))) {
+        applyRemote(remote);
+      } else {
+        await syncPush();
+      }
+    } else {
+      const g = await ghApi('/gists', { method: 'POST', body: JSON.stringify({ description: 'Pip-Boy dashboard data (private)', public: false, files: { [GIST_FILE]: { content: JSON.stringify(S) } } }) });
+      lsSet(GIST_ID_KEY, g.id);
+    }
+    document.getElementById('gistTokenInput').value = '';
+    lastSyncAt = Date.now(); renderConnStatus();
+    toast('SYNC CONNECTED');
+  } catch (e) { syncErr = e.message; renderConnStatus(); toast('SYNC FAILED'); }
+}
+
+function syncDisconnect() {
+  if (!confirm(tr('Stop syncing on this device? The data stays in the gist and on this device.'))) return;
+  try { localStorage.removeItem(GIST_TOKEN_KEY); localStorage.removeItem(GIST_ID_KEY); } catch (e) {}
+  clearTimeout(syncTimer); lastSyncAt = 0; syncErr = ''; renderConnStatus();
+}
+
+async function syncPush(keepalive) {
+  if (!syncConfigured()) return;
+  clearTimeout(syncTimer); syncTimer = null;
+  const body = JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(S) } } });
+  try {
+    await ghApi('/gists/' + lsGet(GIST_ID_KEY), { method: 'PATCH', body, keepalive: !!keepalive && body.length < 60000 });
+    lastSyncAt = Date.now(); syncErr = '';
+  } catch (e) { syncErr = e.message; }
+  renderConnStatus();
+}
+
+function scheduleSyncPush() {
+  if (!syncConfigured()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncPush(), 2000);
+}
+
+async function syncPull() {
+  if (!syncConfigured() || syncBusy) return;
+  syncBusy = true;
+  try {
+    const remote = await syncFetchRemote(lsGet(GIST_ID_KEY));
+    const rt = (remote && remote.meta && remote.meta.updatedAt) || 0, lt = (S.meta && S.meta.updatedAt) || 0;
+    if (remote && rt > lt) { applyRemote(remote); toast('SYNCED FROM CLOUD'); }
+    else if (lt > rt) await syncPush();
+    lastSyncAt = Date.now(); syncErr = '';
+  } catch (e) { syncErr = e.message; }
+  syncBusy = false;
+  renderConnStatus();
+}
+
+async function syncNow() { if (!syncConfigured()) { toast('SYNC IS NOT CONNECTED'); return; } await syncPull(); toast('SYNCED'); }
+
+function setSyncStatus(txt) { document.getElementById('syncStatus').textContent = txt; }
+
+function renderConnStatus() {
+  const hhmm = ms => new Date(ms).toLocaleTimeString('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' });
+  const ss = document.getElementById('syncStatus'), badge = document.getElementById('syncBadge');
+  if (syncErr) { ss.className = 'conn-status'; ss.innerHTML = '<span style="color:var(--pip-red)">' + escHtml(syncErr) + '</span>'; badge.textContent = '☁ !'; }
+  else if (syncConfigured()) { ss.className = 'conn-status ok'; ss.textContent = tr('Sync on') + (lastSyncAt ? ' · ' + tr('last synced') + ' ' + hhmm(lastSyncAt) : ''); badge.textContent = '☁ ' + (lastSyncAt ? hhmm(lastSyncAt) : '…'); }
+  else { ss.className = 'conn-status'; ss.textContent = tr('Sync is off: data is only on this device.'); badge.textContent = ''; }
+  const gs = document.getElementById('gcalStatus2'); if (gs) gs.innerHTML = calStatusText();
+  const ci = document.getElementById('gcalClientInput'); if (ci && !ci.value && gcalClientId()) ci.value = gcalClientId();
+  const mk = document.getElementById('mapKeySetting'); if (mk && !mk.value && getMapKey()) mk.value = getMapKey();
+}
+
+function saveMapKeySetting() {
+  const key = document.getElementById('mapKeySetting').value.trim();
+  if (!key) { toast('ENTER AN API KEY'); return; }
+  lsSet(MAP_KEY_STORAGE, key); S.settings.maptilerKey = key; save();
+  toast('MAP KEY SAVED');
+}
+
+function initSync() {
+  if (!syncConfigured()) { renderConnStatus(); return; }
+  syncPull();
+  setInterval(syncPull, 3 * 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') syncPull();
+    else if (syncTimer) syncPush(true);   // flush pending change when leaving the app
+  });
+}
+
+// ==================== GOAL OF THE DAY ====================
+function saveGoal() {
+  const text = document.getElementById('goalText').value.trim();
+  const sel = document.getElementById('goalTaskSelect');
+  const taskIds = Array.from(sel.selectedOptions).map(o=>o.value).slice(0,3);
+  if (!text && taskIds.length===0) { toast('SET A GOAL OR SELECT TASKS'); return; }
+  S.goals[todayStr()] = { text: text||'Focus day', taskIds };
+  save(); render(); toast('GOAL SET');
+}
+
+// ==================== NAVIGATION ====================
+function switchSection(sec, sub) {
+  currentSection = sec;
+  if (sub) switchSub(sec, sub);
+  document.querySelectorAll('.pip-tab').forEach(t=>t.classList.toggle('active', t.dataset.section===sec));
+  document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active', s.id==='section-'+sec));
+  if (sec === 'map' && !osloMap) initMap();
+  if (sec === 'calendar') { calSel = calSel || todayStr(); }
+  render();
+}
+
+function switchSub(sec, sub) {
+  document.querySelectorAll(`.sub-tabs[data-subtabs="${sec}"] .range-btn`).forEach(b=>b.classList.toggle('active', b.dataset.sub===sub));
+  document.querySelectorAll(`#section-${sec} .sub-section`).forEach(s=>s.classList.toggle('active', s.id==='sub-'+sec+'-'+sub));
+  if (sec==='tasks' && sub==='travel') planTravel();
+}
+
+// ==================== THEME & BRIGHTNESS ====================
+const THEME_KEY = 'pipboy_theme';
+const BRIGHT_KEY = 'pipboy_brightness';
+function lsGet(k) { try { return localStorage.getItem(k); } catch(e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch(e) {} }
+
+function applyTheme(theme) {
+  document.body.dataset.theme = theme;
+  document.getElementById('themeToggle').textContent = theme==='fallout' ? 'Fallout' : 'Standard';
+}
+
+function toggleTheme() {
+  const next = document.body.dataset.theme==='fallout' ? 'standard' : 'fallout';
+  applyTheme(next); lsSet(THEME_KEY, next);
+  applyMapVariant();
+}
+
+function setBrightness(level) {
+  document.body.dataset.brightness = level;
+  document.querySelectorAll('.display-controls [data-bright]').forEach(b=>b.classList.toggle('active', b.dataset.bright===level));
+  lsSet(BRIGHT_KEY, level);
+}
+
+function initDisplay() {
+  const t = lsGet(THEME_KEY), b = lsGet(BRIGHT_KEY);
+  applyTheme(t==='standard' ? 'standard' : 'fallout');
+  setBrightness(['dark','medium','light'].includes(b) ? b : 'dark');
+}
+
+function setRange(r) {
+  currentRange = r;
+  document.querySelectorAll('.range-btn[data-range]').forEach(b=>b.classList.toggle('active', b.dataset.range===r));
+  render();
+}
+
+// ==================== POPULATE DROPDOWNS ====================
+function populateDeadlineDropdowns() {
+  // Rebuilding the options would otherwise reset what the user has selected (e.g. while editing a task).
+  const kept = {};
+  ['taskDeadline','sub5Deadline','taskLocation','sub5Location','taskGroup'].forEach(id => { kept[id] = document.getElementById(id).value; });
+  const active = S.deadlines.filter(d=>!d.date||daysUntil(d.date)>=0).sort(byDl);
+  const all = [...S.deadlines].sort(byDl);
+  const opts = '<option value="">None</option>' + all.map(d=>`<option data-noi18n value="${d.id}">${escHtml(d.title)} (${d.date||'?'})</option>`).join('');
+  document.getElementById('taskDeadline').innerHTML = opts;
+  document.getElementById('sub5Deadline').innerHTML = '<option value="">None</option>' + active.map(d=>`<option data-noi18n value="${d.id}">${escHtml(d.title)} (${d.date||'?'})</option>`).join('');
+  // Home is always the first choice
+  const home = homePlace();
+  const others = S.places.filter(p => p !== home);
+  const locOpts = (home ? `<option data-noi18n value="place:${escHtml(home.id)}">${escHtml(home.name)}</option>` : '') +
+    '<option value="">None</option>' +
+    (others.length ? '<optgroup label="Lagrede steder">' + others.map(p=>`<option data-noi18n value="place:${escHtml(p.id)}">${escHtml(p.name)}</option>`).join('') + '</optgroup>' : '') +
+    '<optgroup label="Områder">' + OSLO_LOCATIONS.map(l=>`<option value="${escHtml(l.name)}">${escHtml(l.name)}</option>`).join('') + '</optgroup>';
+  document.getElementById('taskLocation').innerHTML = locOpts;
+  document.getElementById('sub5Location').innerHTML = locOpts;
+  document.getElementById('taskGroup').innerHTML = '<option value="">No group</option>' +
+    S.groups.map(g=>`<option data-noi18n value="${escHtml(g.id)}">${escHtml(g.name)}</option>`).join('') +
+    '<option value="__new">+ New group...</option>';
+  Object.entries(kept).forEach(([id, v]) => { document.getElementById(id).value = v; });
+
+  const activeTasks = S.tasks.filter(t=>t.status==='active'||t.status==='in_progress');
+  const goalSel = document.getElementById('goalTaskSelect');
+  const todayGoal = S.goals[todayStr()];
+  const selectedIds = todayGoal ? todayGoal.taskIds : [];
+  goalSel.innerHTML = activeTasks.map(t => {
+    const dl = t.deadlineId ? getDeadline(t.deadlineId) : null;
+    const dlLabel = dl ? ' ['+escHtml(dl.title)+']' : '';
+    const sel = selectedIds.includes(t.id) ? ' selected' : '';
+    return `<option data-noi18n value="${t.id}"${sel}>${escHtml(t.text)}${dlLabel}</option>`;
+  }).join('');
+}
+
+// ==================== RENDER ====================
+function render() {
+  populateDeadlineDropdowns();
+  const label = rangeLabel(currentRange);
+  document.getElementById('sleepRangeLabel').textContent = label;
+  document.getElementById('screenRangeLabel').textContent = label;
+  document.getElementById('logRangeLabel').textContent = label;
+
+  renderHome();
+  renderDeadlines();
+  renderSleepStats();
+  renderSleepChart();
+  renderScreenStats();
+  renderScreenChart();
+  renderTasks();
+  renderSub5();
+  renderPlaces();
+  renderMap();
+  renderLog();
+  renderDeadlineChips();
+  renderCalendar();
+  renderConnStatus();
+}
+
+// ==================== HOME ====================
+function renderHome() {
+  const sl7 = filterR7(S.sleep);
+  if (sl7.length) {
+    document.getElementById('homeAvgSleep').innerHTML = (sl7.reduce((s,e)=>s+e.hours,0)/sl7.length).toFixed(1)+'<span class="stat-unit">h</span>';
+    document.getElementById('homeAvgBed').textContent = avgTime(sl7.map(e=>e.bedtime));
+    document.getElementById('homeAvgWake').textContent = avgTime(sl7.map(e=>e.wake));
+  } else {
+    document.getElementById('homeAvgSleep').innerHTML = '--<span class="stat-unit">h</span>';
+    document.getElementById('homeAvgBed').textContent = '--:--';
+    document.getElementById('homeAvgWake').textContent = '--:--';
+  }
+  const sc7 = filterR7(S.screen);
+  if (sc7.length) {
+    document.getElementById('homeAvgScreen').innerHTML = (sc7.reduce((s,e)=>s+e.total,0)/sc7.length).toFixed(1)+'<span class="stat-unit">h</span>';
+    document.getElementById('homeAvgSocial').innerHTML = (sc7.reduce((s,e)=>s+e.social,0)/sc7.length).toFixed(1)+'<span class="stat-unit">h</span>';
+  } else {
+    document.getElementById('homeAvgScreen').innerHTML = '--<span class="stat-unit">h</span>';
+    document.getElementById('homeAvgSocial').innerHTML = '--<span class="stat-unit">h</span>';
+  }
+  const finCount = S.tasks.filter(t=>t.status==='finished').length;
+  document.getElementById('homeTasksDone').textContent = finCount;
+
+  // Goal of the day
+  const goal = S.goals[todayStr()];
+  const display = document.getElementById('goalDisplay');
+  if (goal) {
+    let html = '<div class="goal-box"><div class="goal-text" data-noi18n>> ' + escHtml(goal.text) + '</div>';
+    goal.taskIds.forEach(tid => {
+      const t = S.tasks.find(x=>x.id===tid);
+      if (t) {
+        const dl = t.deadlineId ? getDeadline(t.deadlineId) : null;
+        const dlPri = dl ? dl.priority : 'normal';
+        const priCls = dlPri==='urgent'?'pri-urgent':dlPri==='high'?'pri-high':'';
+        html += `<div class="goal-task-item">
+          <span class="status-dot dot-${t.status}"></span>
+          <span class="${t.status==='finished'||t.status==='discarded'?'status-'+t.status:''} ${priCls}">${escHtml(t.text)}</span>
+          ${t.status==='active'?`<button class="pip-btn sm" onclick="setTaskStatus('${t.id}','in_progress')">Start</button>`:''}
+          ${t.status==='in_progress'?`<button class="pip-btn sm" onclick="setTaskStatus('${t.id}','finished')">Done</button>`:''}
+        </div>`;
+      }
+    });
+    html += '</div>';
+    display.innerHTML = html;
+  } else {
+    display.innerHTML = '';
+  }
+
+  // Urgent deadlines
+  const urgents = S.deadlines.filter(d=>(d.priority==='urgent'||d.priority==='high')&&!isDeadlinePast(d)).sort(byDl).slice(0,5);
+  const urgDiv = document.getElementById('homeUrgentDeadlines');
+  const urgEmpty = document.getElementById('homeUrgentEmpty');
+  if (urgents.length) {
+    urgEmpty.style.display='none';
+    urgDiv.innerHTML = urgents.map(d => {
+      const cd = fmtCountdown(d);
+      const at = deadlineActiveTasks(d.id).length;
+      const tt = deadlineTasks(d.id).length;
+      const timeLabel = d.time ? ' @ '+d.time : '';
+      return `<div class="deadline-card ${d.priority==='urgent'?'urgent-glow':'high-glow'}">
+        <div class="dl-info"><div class="dl-title pri-${d.priority}" data-noi18n>${escHtml(d.title)}</div>
+        <div class="dl-meta">${d.date ? d.date : tr('Date not known')}${timeLabel} | ${at} ${tr('active')} / ${tt} ${tr('total tasks')}</div></div>
+        <div class="dl-countdown"><div class="pri-${d.priority}">${cd.main}</div>
+        <div class="cd-label">${cd.sub}</div></div></div>`;
+    }).join('');
+  } else {
+    urgEmpty.style.display='block';
+    urgDiv.innerHTML='';
+  }
+}
+
+// ==================== DEADLINES ====================
+function renderDeadlines() {
+  const sorted = [...S.deadlines].sort(byDl);
+  const list = document.getElementById('deadlineList');
+  const empty = document.getElementById('deadlineEmpty');
+  if (!sorted.length) { list.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  list.innerHTML = sorted.map(d => {
+    const cd = fmtCountdown(d);
+    const past = isDeadlinePast(d);
+    const at = deadlineActiveTasks(d.id).length;
+    const tt = deadlineTasks(d.id).length;
+    const tasks = deadlineTasks(d.id);
+    const timeLabel = d.time ? ' @ '+d.time : '';
+    let taskHtml = '';
+    if (tasks.length) {
+      taskHtml = '<div style="margin-top:6px; padding-top:6px; border-top:1px solid var(--pip-green-dark);">' +
+        tasks.map(t => `<div class="goal-task-item">
+          <span class="status-dot dot-${t.status}"></span>
+          <span class="${t.status==='finished'||t.status==='discarded'?'status-'+t.status:''}">${escHtml(t.text)}${t.sub5min?' <span style="color:var(--pip-green-dark)">[EF]</span>':''}</span>
+          ${statusButtons(t)}
+        </div>`).join('') + '</div>';
+    }
+    return `<div class="deadline-card ${d.priority==='urgent'?'urgent-glow':d.priority==='high'?'high-glow':''}">
+      <div class="dl-info">
+        <div class="dl-title pri-${d.priority}" data-noi18n>${escHtml(d.title)}</div>
+        <div class="dl-meta">${d.date ? d.date : tr('Date not known')}${timeLabel} | ${tr('Priority')}: ${tr(d.priority[0].toUpperCase()+d.priority.slice(1))}</div>
+        <div style="font-size:10px;color:var(--pip-green-dim);letter-spacing:1px;text-align:left;margin-top:2px;">${tr('Total')}: ${tt} | ${tr('Active')}: ${at}</div>
+        ${taskHtml}
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+        <div class="dl-countdown">
+          <div class="${past?'pri-urgent':'pri-'+d.priority}">${cd.main}</div>
+          <div class="cd-label">${cd.sub}</div>
+        </div>
+        <div style="display:flex; gap:4px;">
+          ${gcalConnected() && d.date ? `<button class="pip-btn sm" onclick="gcalPush('dl','${d.id}')" title="Send to Google Calendar">&rarr; Google</button>` : ''}
+          <button class="pip-btn sm" onclick="editDeadline('${d.id}')">[edit]</button>
+          <button class="pip-btn sm danger" onclick="delDeadline('${d.id}')">[x]</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function statusButtons(t) {
+  let b = '';
+  if (t.status==='active') b += `<button class="pip-btn sm" onclick="setTaskStatus('${t.id}','in_progress')">Start</button>`;
+  if (t.status==='active'||t.status==='in_progress') b += `<button class="pip-btn sm" onclick="setTaskStatus('${t.id}','finished')">Done</button>`;
+  if (t.status==='active'||t.status==='in_progress') b += `<button class="pip-btn sm danger" onclick="setTaskStatus('${t.id}','discarded')">Drop</button>`;
+  return b;
+}
+
+// ==================== TASKS ====================
+function taskOpen(t) { return t.status==='active' || t.status==='in_progress'; }
+function taskMatchesFilter(t) {
+  if (taskFilter==='all') return true;
+  if (taskFilter==='open') return taskOpen(t);
+  return t.status===taskFilter;
+}
+function taskSortCmp(a, b) {
+  const priOrder = { urgent:0, high:1, normal:2, low:3 };
+  const oa = taskOpen(a)?0:1, ob = taskOpen(b)?0:1;
+  if (oa!==ob) return oa-ob;
+  const da = a.deadlineId ? getDeadline(a.deadlineId) : null, db = b.deadlineId ? getDeadline(b.deadlineId) : null;
+  const pa = da ? priOrder[da.priority]??2 : 2, pb = db ? priOrder[db.priority]??2 : 2;
+  if (pa!==pb) return pa-pb;
+  const ka = (a.date||da&&da.date||'9999') + (a.time||''), kb = (b.date||db&&db.date||'9999') + (b.time||'');
+  return ka.localeCompare(kb);
+}
+
+let collapsedGroups = (() => { try { return JSON.parse(lsGet('pipboy_collapsed') || '[]'); } catch(e) { return []; } })();
+function toggleGroupCollapse(key) {
+  collapsedGroups = collapsedGroups.includes(key) ? collapsedGroups.filter(k=>k!==key) : [...collapsedGroups, key];
+  lsSet('pipboy_collapsed', JSON.stringify(collapsedGroups));
+  renderTasks();
+}
+function setGroupFilter(g) { groupFilter = g; renderTasks(); }
+function toggleTaskOpen(id) { openTasks.has(id) ? openTasks.delete(id) : openTasks.add(id); renderTasks(); }
+function toggleImportant(id) { const t = S.tasks.find(x=>x.id===id); if (t) { t.important = !t.important; save(); render(); } }
+function toggleStep(tid, sid) {
+  const t = S.tasks.find(x=>x.id===tid); const st = t && (t.steps||[]).find(x=>x.id===sid);
+  if (st) { st.done = !st.done; save(); render(); }
+}
+function addStepInline(tid) {
+  const inp = document.getElementById('stepIn-'+tid); const t = S.tasks.find(x=>x.id===tid);
+  const text = inp && inp.value.trim(); if (!t || !text) return;
+  (t.steps = t.steps||[]).push({ id: uid(), text, done: false });
+  save(); render();
+  const again = document.getElementById('stepIn-'+tid); if (again) again.focus();
+}
+function delStep(tid, sid) {
+  const t = S.tasks.find(x=>x.id===tid); if (!t) return;
+  t.steps = (t.steps||[]).filter(x=>x.id!==sid); save(); render();
+}
+
+function renderGroupFilter() {
+  const chip = (key, label) => `<button class="range-btn ${groupFilter===key?'active':''}" onclick="setGroupFilter('${key}')">${label}</button>`;
+  document.getElementById('groupFilterBar').innerHTML =
+    chip('all', tr('All groups')) + chip('important', '&#9733; ' + tr('Important')) +
+    S.groups.map(g => `<button class="range-btn ${groupFilter===g.id?'active':''}" onclick="setGroupFilter('${g.id}')" data-noi18n>${escHtml(g.name)}</button>`).join('') +
+    chip('none', tr('Ungrouped'));
+}
+
+function taskRowHtml(t) {
+  const dl = t.deadlineId ? getDeadline(t.deadlineId) : null;
+  const steps = t.steps || [];
+  const closed = !taskOpen(t);
+  const meta = [];
+  if (t.status !== 'active') meta.push(`<span class="status-badge status-${t.status}">${tr(t.status.replace('_',' '))}</span>`);
+  if (dl) meta.push(`<span class="pri-${dl.priority}">&#9873; <span data-noi18n>${escHtml(dl.title)}</span>${dl.date ? ' · ' + shortD(dl.date) : ''}</span>`);
+  if (t.date) meta.push(`&#9719; ${shortD(t.date)}${t.time ? ' ' + t.time : ''}`);
+  const place = taskPlace(t); if (place) meta.push(`&#8982; <span data-noi18n>${escHtml(place)}</span>`);
+  if (steps.length) meta.push(`&#9745; ${steps.filter(x=>x.done).length}/${steps.length}`);
+  if (t.desc) meta.push('&#8801;');
+  if (t.sub5min) meta.push('EF');
+  const wx = wxBadge(wxWarnings[t.id]); if (wx) meta.push(wx);
+  return `<div class="task-row ${closed?'task-done':''}">
+      <button class="star-btn ${t.important?'on':''}" onclick="toggleImportant('${t.id}')" title="${tr('Important')}">${t.important?'&#9733;':'&#9734;'}</button>
+      <div class="task-main" onclick="toggleTaskOpen('${t.id}')">
+        <div class="task-title" data-noi18n>${escHtml(t.text)}</div>
+        ${meta.length ? `<div class="task-meta">${meta.map(m=>`<span>${m}</span>`).join('')}</div>` : ''}
+      </div>
+      <div class="task-actions">
+        ${statusButtons(t)}
+        <button class="act-btn" onclick="editTask('${t.id}')">[e]</button>
+        <button class="act-btn del" onclick="delTask('${t.id}')">[x]</button>
+      </div>
+    </div>${openTasks.has(t.id) ? taskDetailsHtml(t) : ''}`;
+}
+
+function taskDetailsHtml(t) {
+  const steps = t.steps || [];
+  return `<div class="task-details">
+      ${t.desc ? `<div class="task-desc" data-noi18n>${escHtml(t.desc)}</div>` : ''}
+      ${steps.map(st => `<div class="task-step ${st.done?'done':''}">
+        <input type="checkbox" ${st.done?'checked':''} onchange="toggleStep('${t.id}','${st.id}')">
+        <span data-noi18n>${escHtml(st.text)}</span>
+        <button class="act-btn del" onclick="delStep('${t.id}','${st.id}')">[x]</button></div>`).join('')}
+      <div class="addr-wrap" style="margin-top:6px;"><input type="text" class="pip-input" id="stepIn-${t.id}" placeholder="Add a step" maxlength="150" onkeydown="if(event.key==='Enter')addStepInline('${t.id}')"><button class="pip-btn sm" onclick="addStepInline('${t.id}')">+</button></div>
+      ${gcalConnected() && t.date ? `<button class="link-btn" style="margin-top:6px;" onclick="gcalPush('task','${t.id}')">&rarr; ${tr('Send to Google Calendar')}</button>` : ''}
+    </div>`;
+}
+
+function renderTasks() {
+  const list = document.getElementById('taskList');
+  const empty = document.getElementById('taskEmpty');
+  renderGroupFilter();
+  let tasks = S.tasks.filter(taskMatchesFilter);
+  if (groupFilter==='important') tasks = tasks.filter(t=>t.important);
+  else if (groupFilter==='none') tasks = tasks.filter(t=>!t.groupId || !getGroup(t.groupId));
+  else if (groupFilter!=='all') tasks = tasks.filter(t=>t.groupId===groupFilter);
+  if (!tasks.length) { list.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tasks.sort(taskSortCmp);
+
+  // Important tasks float to the top; the rest is grouped so the key items don't drown.
+  const sections = [];
+  const imp = tasks.filter(t=>t.important);
+  if (imp.length) sections.push({ key: '__imp', name: '&#9733; ' + tr('Important'), tasks: imp, cls: 'important' });
+  const rest = tasks.filter(t=>!t.important);
+  S.groups.forEach(g => { const ts = rest.filter(t=>t.groupId===g.id); if (ts.length) sections.push({ key: g.id, name: escHtml(g.name), tasks: ts, group: g }); });
+  const none = rest.filter(t=>!t.groupId || !getGroup(t.groupId));
+  if (none.length) sections.push({ key: '__none', name: tr('Ungrouped'), tasks: none });
+
+  list.innerHTML = sections.map(sec => {
+    const collapsed = collapsedGroups.includes(sec.key);
+    return `<div class="task-group ${sec.cls||''}">
+      <div class="task-group-head" onclick="toggleGroupCollapse('${sec.key}')">
+        <span>${collapsed?'&#9656;':'&#9662;'}</span><span class="grow" data-noi18n>${sec.name} <span class="cnt">(${sec.tasks.length})</span></span>
+        ${sec.group ? `<button class="act-btn del" onclick="event.stopPropagation();delGroup('${sec.group.id}')" title="${tr('Delete group')}">[x]</button>` : ''}
+      </div>
+      ${collapsed ? '' : sec.tasks.map(taskRowHtml).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ==================== EASY-FIX (sub5min tasks) ====================
+function renderSub5() {
+  const tasks = S.tasks.filter(t=>t.sub5min).sort((a,b) => {
+    const sa = (a.status==='active'||a.status==='in_progress')?0:1;
+    const sb = (b.status==='active'||b.status==='in_progress')?0:1;
+    return sa-sb;
+  });
+  const body = document.getElementById('sub5Body');
+  const empty = document.getElementById('sub5Empty');
+  const table = document.getElementById('sub5Table');
+  if (!tasks.length) { body.innerHTML=''; table.style.display='none'; empty.style.display='block'; return; }
+  table.style.display=''; empty.style.display='none';
+
+  body.innerHTML = tasks.map(t => {
+    const dl = t.deadlineId ? getDeadline(t.deadlineId) : null;
+    return `<tr>
+      <td class="${t.status==='finished'||t.status==='discarded'?'status-'+t.status:''}">${escHtml(t.text)}</td>
+      <td><span class="status-badge status-${t.status}">${t.status.replace('_',' ')}</span></td>
+      <td>${dl?escHtml(dl.title):'-'}</td>
+      <td style="font-size:10px;color:var(--pip-green-dim)">${t.geo?'@ ':''}${escHtml(taskPlace(t))}</td>
+      <td style="white-space:nowrap;">
+        ${statusButtons(t)}
+        <button class="act-btn" onclick="editTask('${t.id}')">[e]</button>
+        <button class="act-btn del" onclick="delTask('${t.id}')">[x]</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ==================== MAP ====================
+// API key stored in localStorage — never hardcoded in source.
+// For a standalone HTML file, localStorage is the secure-storage equivalent
+// of .env on a server. The key is a public client-side token scoped to
+// the user's MapTiler account; it is NOT a secret, but we still avoid
+// committing it to source.
+const MAP_KEY_STORAGE = 'pipboy_maptiler_key';
+let osloMap = null;
+
+function getMapKey() { return lsGet(MAP_KEY_STORAGE) || (S.settings && S.settings.maptilerKey) || ''; }
+
+function saveMapKey() {
+  const key = document.getElementById('mapKeyInput').value.trim();
+  if (!key) { toast('ENTER AN API KEY'); return; }
+  localStorage.setItem(MAP_KEY_STORAGE, key);
+  S.settings.maptilerKey = key; save();
+  document.getElementById('mapKeyPrompt').style.display = 'none';
+  initMap();
+  renderMap();
+  toast('MAP KEY SAVED');
+}
+
+// ---- Map palettes: 'fallout' (dark green CRT) and 'standard' (light, Google Maps-like) ----
+const MAP_PALETTES = {
+  fallout: {
+    bg: '#0a0a0a', water: '#040e04', glow: '#00FF00', shore: null,
+    waterway: '#0a2a0a', waterwayOp: 0.6,
+    landcover: '#0d150d', landcoverOp: 0.5, landuse: '#0a120a', landuseOp: 0.35,
+    building: '#111811', buildingLine: '#1a2a1a', buildingOp: 0.6,
+    motorwayCasing: '#330000', mainCasing: '#331a00', minorCasing: null,
+    service: '#4a3510', serviceOp: 0.4, minor: '#8B6914', minorOp: 0.55,
+    tertiary: '#CC8400', secondary: '#FFA500', primary: '#FFA500', trunk: '#FF4400', motorway: '#FF0000',
+    foot: '#FDF6E2', footOp: 0.45, trail: '#FDF6E2', trailOp: 0.35, bike: '#0055FF', bikeOp: 0.75,
+    rail: '#14fe17', railOp: 0.15,
+    label: '#14fe17', halo: '#0a0a0a', roadLabelOp: 0.4, placeLabelOp: 0.6,
+  },
+  standard: {
+    bg: '#f5f3ef', water: '#aadaff', glow: null, shore: '#8cc4ee',
+    waterway: '#aadaff', waterwayOp: 1,
+    landcover: '#cde8c4', landcoverOp: 0.8, landuse: '#ebe8e1', landuseOp: 0.7,
+    building: '#e8e5e0', buildingLine: '#d6d2cb', buildingOp: 1,
+    motorwayCasing: '#b3261e', mainCasing: '#d99a4e', minorCasing: '#d9d5ce',
+    service: '#ffffff', serviceOp: 1, minor: '#ffffff', minorOp: 1,
+    tertiary: '#fbd38d', secondary: '#f8b24a', primary: '#f59e0b', trunk: '#ef6c00', motorway: '#e53935',
+    foot: '#c9a227', footOp: 0.85, trail: '#b8901d', trailOp: 0.75, bike: '#1a73e8', bikeOp: 0.85,
+    rail: '#9e9a94', railOp: 0.7,
+    label: '#5f6368', halo: '#ffffff', roadLabelOp: 0.9, placeLabelOp: 0.95,
+  },
+};
+
+// "Plain" roads (colour coding off): monochrome green in Fallout, white/yellow like Google in Standard.
+const ROAD_PLAIN = {
+  fallout: {
+    motorwayCasing: '#062806', mainCasing: '#062806',
+    service: '#0f3f10', minor: '#145c16', tertiary: '#1b7a1d', secondary: '#239626', primary: '#239626', trunk: '#2fbf31', motorway: '#2fbf31',
+    foot: '#1a6b1c', trail: '#1a6b1c', bike: '#1a6b1c', footOp: 0.6, trailOp: 0.5, bikeOp: 0.6,
+  },
+  standard: {
+    motorwayCasing: '#e0b64a', mainCasing: '#cfcac2',
+    service: '#ffffff', minor: '#ffffff', tertiary: '#ffffff', secondary: '#ffffff', primary: '#ffffff', trunk: '#fde293', motorway: '#fde293',
+    foot: '#bdb8ae', trail: '#bdb8ae', bike: '#bdb8ae', footOp: 0.8, trailOp: 0.7, bikeOp: 0.8,
+  },
+};
+const MAP_ROADCOLORS_KEY = 'pipboy_map_roadcolors';
+function roadColorsOn() { return lsGet(MAP_ROADCOLORS_KEY) !== 'off'; }
+function mapPalette(v) { return roadColorsOn() ? MAP_PALETTES[v] : { ...MAP_PALETTES[v], ...ROAD_PLAIN[v] }; }
+
+function setRoadColors(on) {
+  lsSet(MAP_ROADCOLORS_KEY, on ? 'on' : 'off');
+  const v = getMapVariant();
+  renderMapLegend(v);
+  if (osloMap) { osloMap.setStyle(buildMapStyle(getMapKey(), v)); mapVariantShown = v; }
+}
+
+const MAP_STYLE_KEY = 'pipboy_map_style';
+const MAP_BRIGHT_KEY = 'pipboy_map_brightness';
+let mapVariantShown = null;
+
+function getMapStylePref() { const v = lsGet(MAP_STYLE_KEY); return ['fallout','standard'].includes(v) ? v : 'auto'; }
+function getMapVariant() { const p = getMapStylePref(); return p === 'auto' ? (document.body.dataset.theme === 'standard' ? 'standard' : 'fallout') : p; }
+
+function setMapStylePref(v) {
+  lsSet(MAP_STYLE_KEY, v);
+  applyMapVariant();
+}
+
+function applyMapVariant() {
+  const v = getMapVariant();
+  renderMapLegend(v);
+  if (osloMap && v !== mapVariantShown) {
+    osloMap.setStyle(buildMapStyle(getMapKey(), v));
+    mapVariantShown = v;
+  }
+}
+
+function setMapBrightness(pct) {
+  pct = Math.min(160, Math.max(40, Number(pct) || 100));
+  document.getElementById('osloMap').style.setProperty('--map-brightness', pct / 100);
+  document.getElementById('mapBrightness').value = pct;
+  document.getElementById('mapBrightVal').textContent = pct + '%';
+  lsSet(MAP_BRIGHT_KEY, String(pct));
+}
+
+function initMapDisplay() {
+  document.getElementById('mapStyleSelect').value = getMapStylePref();
+  document.getElementById('mapRoadColors').checked = roadColorsOn();
+  setMapBrightness(lsGet(MAP_BRIGHT_KEY) || 100);
+  renderMapLegend(getMapVariant());
+}
+
+function renderMapLegend(v) {
+  const P = MAP_PALETTES[v];
+  const roads = roadColorsOn();
+  const line = (c, label, extra='') => `<span class="map-legend-item"><span class="map-legend-line" style="border-color:${c};${extra}"></span> ${label}</span>`;
+  const dot = (c, label, extra='') => `<span class="map-legend-item"><span class="map-legend-dot" style="background:${c};${extra}"></span> ${label}</span>`;
+  document.getElementById('mapLegend').innerHTML =
+    (roads ? line(P.motorway, 'Motorvei') + line(P.primary, 'Bilvei') + line(P.bike, 'Sykkelvei') +
+      line(P.foot, 'Gangvei') + line(P.trail, 'Sti', 'border-style:dashed') : '') +
+    (P.glow ? line(P.glow, 'Kystlinje', `opacity:0.5; box-shadow:0 0 4px ${P.glow}`) : line(P.shore, 'Kystlinje')) +
+    '<span style="color:var(--pip-green-dark); margin-left:6px;">|</span>' +
+    dot('var(--pip-green)', 'Aktive') + dot('var(--pip-amber)', 'Høy') + dot('var(--pip-red)', 'Haster') + dot('var(--pip-green-dim)', 'Ferdig') +
+    dot('var(--pip-green-dim)', 'Adresse / sted', 'border-radius:2px') +
+    `<span class="map-legend-item"><span class="pip-marker pip-marker-place" style="width:12px;height:12px;font-size:8px;display:inline-flex;">★</span> Lagret sted</span>`;
+}
+
+function buildMapStyle(key, variant) {
+  const S_NAME = 'openmaptiles';
+  const P = mapPalette(MAP_PALETTES[variant] ? variant : 'fallout');
+  const T = { source: S_NAME, 'source-layer': 'transportation' };
+  const upper = variant === 'fallout' ? 'uppercase' : 'none';
+  const layers = [
+    // ---- Background ----
+    { id: 'bg', type: 'background', paint: { 'background-color': P.bg } },
+
+    // ---- Land cover (forests, grass) & land use (parks, industrial) ----
+    { id: 'landcover', type: 'fill', source: S_NAME, 'source-layer': 'landcover',
+      paint: { 'fill-color': P.landcover, 'fill-opacity': P.landcoverOp } },
+    { id: 'landuse', type: 'fill', source: S_NAME, 'source-layer': 'landuse',
+      paint: { 'fill-color': P.landuse, 'fill-opacity': P.landuseOp } },
+
+    // ---- Water fill ----
+    { id: 'water', type: 'fill', source: S_NAME, 'source-layer': 'water',
+      paint: { 'fill-color': P.water } },
+  ];
+
+  // ---- Coastline: 3-layer green glow (fallout) or a plain shoreline (standard) ----
+  if (P.glow) {
+    layers.push(
+      { id: 'water-glow-outer', type: 'line', source: S_NAME, 'source-layer': 'water',
+        paint: { 'line-color': P.glow, 'line-width': 14, 'line-opacity': 0.06, 'line-blur': 10 } },
+      { id: 'water-glow-mid', type: 'line', source: S_NAME, 'source-layer': 'water',
+        paint: { 'line-color': P.glow, 'line-width': 5, 'line-opacity': 0.15, 'line-blur': 4 } },
+      { id: 'water-glow-core', type: 'line', source: S_NAME, 'source-layer': 'water',
+        paint: { 'line-color': P.glow, 'line-width': 1.5, 'line-opacity': 0.4, 'line-blur': 1 } });
+  } else {
+    layers.push({ id: 'water-shore', type: 'line', source: S_NAME, 'source-layer': 'water',
+      paint: { 'line-color': P.shore, 'line-width': 0.8, 'line-opacity': 0.8 } });
+  }
+
+  // ---- Waterways (rivers, streams) ----
+  layers.push({ id: 'waterway', type: 'line', source: S_NAME, 'source-layer': 'waterway',
+    paint: { 'line-color': P.waterway, 'line-width': ['interpolate',['linear'],['zoom'],10,0.5,16,2], 'line-opacity': P.waterwayOp } });
+  if (P.glow) layers.push({ id: 'waterway-glow', type: 'line', source: S_NAME, 'source-layer': 'waterway',
+    paint: { 'line-color': P.glow, 'line-width': 4, 'line-opacity': 0.08, 'line-blur': 3 } });
+
+  // ---- Buildings ----
+  layers.push({ id: 'building', type: 'fill', source: S_NAME, 'source-layer': 'building', minzoom: 14,
+    paint: { 'fill-color': P.building, 'fill-outline-color': P.buildingLine, 'fill-opacity': P.buildingOp } });
+
+  // ---- ROADS: casings (outlines beneath fills) ----
+  if (P.minorCasing) layers.push({ id: 'road-minor-casing', type: 'line', ...T,
+    filter: ['in', 'class', 'minor', 'service', 'tertiary'], minzoom: 13,
+    paint: { 'line-color': P.minorCasing, 'line-width': ['interpolate',['linear'],['zoom'],13,1.2,16,4.5] } });
+
+  layers.push(
+    { id: 'road-motorway-casing', type: 'line', ...T,
+      filter: ['in', 'class', 'motorway', 'trunk'],
+      paint: { 'line-color': P.motorwayCasing, 'line-width': ['interpolate',['linear'],['zoom'],6,2,16,8], 'line-opacity': 0.5 } },
+    { id: 'road-main-casing', type: 'line', ...T,
+      filter: ['in', 'class', 'primary', 'secondary'],
+      paint: { 'line-color': P.mainCasing, 'line-width': ['interpolate',['linear'],['zoom'],8,1.5,16,6], 'line-opacity': 0.4 } },
+
+    // ---- ROADS: fills ----
+    { id: 'road-service', type: 'line', ...T, filter: ['==', 'class', 'service'], minzoom: 14,
+      paint: { 'line-color': P.service, 'line-width': 0.8, 'line-opacity': P.serviceOp } },
+    { id: 'road-minor', type: 'line', ...T, filter: ['==', 'class', 'minor'], minzoom: 13,
+      paint: { 'line-color': P.minor, 'line-width': ['interpolate',['linear'],['zoom'],13,0.3,16,2], 'line-opacity': P.minorOp } },
+    { id: 'road-tertiary', type: 'line', ...T, filter: ['==', 'class', 'tertiary'],
+      paint: { 'line-color': P.tertiary, 'line-width': ['interpolate',['linear'],['zoom'],10,0.4,16,2.5], 'line-opacity': 0.85 } },
+    { id: 'road-secondary', type: 'line', ...T, filter: ['==', 'class', 'secondary'],
+      paint: { 'line-color': P.secondary, 'line-width': ['interpolate',['linear'],['zoom'],8,0.8,16,3], 'line-opacity': 0.9 } },
+    { id: 'road-primary', type: 'line', ...T, filter: ['==', 'class', 'primary'],
+      paint: { 'line-color': P.primary, 'line-width': ['interpolate',['linear'],['zoom'],8,1,16,3.5] } },
+    { id: 'road-trunk', type: 'line', ...T, filter: ['==', 'class', 'trunk'],
+      paint: { 'line-color': P.trunk, 'line-width': ['interpolate',['linear'],['zoom'],6,1,16,4.5] } },
+    { id: 'road-motorway', type: 'line', ...T, filter: ['==', 'class', 'motorway'],
+      paint: { 'line-color': P.motorway, 'line-width': ['interpolate',['linear'],['zoom'],6,1.2,16,5] } },
+
+    // ---- PATHS ----
+    // Pedestrian paths (solid thin yellow)
+    { id: 'path-foot', type: 'line', ...T,
+      filter: ['all', ['==', 'class', 'path'], ['in', 'subclass', 'footway', 'pedestrian', 'steps']], minzoom: 14,
+      paint: { 'line-color': P.foot, 'line-width': 1.2, 'line-opacity': P.footOp } },
+    // Trails / tracks (dashed yellow for unpaved)
+    { id: 'path-trail', type: 'line', ...T,
+      filter: ['any',
+        ['all', ['==', 'class', 'path'], ['!in', 'subclass', 'footway', 'pedestrian', 'steps', 'cycleway']],
+        ['==', 'class', 'track']
+      ], minzoom: 14,
+      paint: { 'line-color': P.trail, 'line-width': 1, 'line-opacity': P.trailOp, 'line-dasharray': [2, 3] } },
+    // Bicycle paths (blue, on top so visible over roads)
+    { id: 'path-bicycle', type: 'line', ...T,
+      filter: ['all', ['==', 'class', 'path'], ['==', 'subclass', 'cycleway']], minzoom: 12,
+      paint: { 'line-color': P.bike, 'line-width': ['interpolate',['linear'],['zoom'],12,1,16,2.5], 'line-opacity': P.bikeOp } },
+
+    // ---- RAIL (subtle) ----
+    { id: 'rail', type: 'line', ...T, filter: ['==', 'class', 'rail'], minzoom: 11,
+      paint: { 'line-color': P.rail, 'line-width': 1, 'line-opacity': P.railOp, 'line-dasharray': [4, 4] } },
+
+    // ---- LABELS ----
+    { id: 'road-label', type: 'symbol', source: S_NAME, 'source-layer': 'transportation_name', minzoom: 14,
+      layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 10,
+        'symbol-placement': 'line', 'text-max-angle': 30, 'text-transform': upper },
+      paint: { 'text-color': P.label, 'text-opacity': P.roadLabelOp, 'text-halo-color': P.halo, 'text-halo-width': 1.5 } },
+    { id: 'place-label', type: 'symbol', source: S_NAME, 'source-layer': 'place',
+      layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'],
+        'text-size': ['interpolate',['linear'],['zoom'],10,11,16,16], 'text-transform': upper,
+        'text-letter-spacing': 0.1 },
+      paint: { 'text-color': P.label, 'text-opacity': P.placeLabelOp, 'text-halo-color': P.halo, 'text-halo-width': 2 } }
+  );
+
+  return {
+    version: 8,
+    sources: { [S_NAME]: { type: 'vector', url: 'https://api.maptiler.com/tiles/v3/tiles.json?key=' + key } },
+    glyphs: 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=' + key,
+    layers,
+  };
+}
+
+function initMap() {
+  if (osloMap) return;
+  const key = getMapKey();
+  if (!key) {
+    document.getElementById('mapKeyPrompt').style.display = 'flex';
+    return;
+  }
+  try {
+    mapVariantShown = getMapVariant();
+    osloMap = new maplibregl.Map({
+      container: 'osloMap',
+      style: buildMapStyle(key, mapVariantShown),
+      center: [10.755, 59.922],
+      zoom: 13,
+      attributionControl: true,
+    });
+    osloMap.addControl(new maplibregl.NavigationControl(), 'top-left');
+  } catch(e) {
+    console.error('Map init failed', e);
+    toast('MAP FAILED TO LOAD — CHECK API KEY');
+  }
+}
+
+// Groups of tasks sharing one map position: an Oslo area, or an exact geotagged address.
+let mapGroups = [];
+
+function buildMapGroups() {
+  const byKey = {};
+  S.tasks.forEach(t => {
+    const pt = taskPoint(t);
+    if (!pt) return;
+    const isAddr = pt.kind !== 'area';
+    const key = isAddr ? 'pt:' + pt.lat.toFixed(5) + ',' + pt.lng.toFixed(5) : 'loc:' + pt.name;
+    if (!byKey[key]) byKey[key] = { name: pt.name, lat: pt.lat, lng: pt.lng, isAddr, tasks: [], marker: null };
+    byKey[key].tasks.push(t);
+  });
+  return Object.values(byKey).sort((a,b) => a.name.localeCompare(b.name));
+}
+
+// Small star markers for every saved place
+let placeMarkers = [];
+function renderPlaceMarkers() {
+  placeMarkers.forEach(m => m.remove());
+  placeMarkers = S.places.map(p => {
+    const el = document.createElement('div');
+    el.className = 'pip-marker pip-marker-place';
+    el.textContent = p.home ? '⌂' : '★';
+    el.title = p.name;
+    const popup = new maplibregl.Popup({ offset: 10, maxWidth: '240px' })
+      .setHTML(`<div class="popup-loc">${escHtml(p.name)}</div><div style="font-size:10px">${escHtml(p.label||'')}</div>`);
+    return new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([p.lng, p.lat]).setPopup(popup).addTo(osloMap);
+  });
+}
+
+function renderMap() {
+  const taskList = document.getElementById('mapTaskList');
+  const taskEmpty = document.getElementById('mapTaskEmpty');
+
+  if (!osloMap) { initMap(); if (!osloMap) return; }
+
+  // Force resize when tab becomes visible
+  setTimeout(() => { if (osloMap) osloMap.resize(); }, 120);
+
+  // Clear existing markers
+  mapGroups.forEach(g => g.marker && g.marker.remove());
+  mapGroups = buildMapGroups();
+  renderPlaceMarkers();
+
+  mapGroups.forEach(g => {
+    const tasks = g.tasks;
+    const activeTasks = tasks.filter(t => t.status==='active' || t.status==='in_progress');
+    const allDone = activeTasks.length === 0;
+    const hasActivePri = p => activeTasks.some(t => {
+      const dl = t.deadlineId ? getDeadline(t.deadlineId) : null;
+      return dl && dl.priority === p;
+    });
+
+    let colorClass = 'pip-marker-green';
+    if (allDone) colorClass = 'pip-marker-dim';
+    else if (hasActivePri('urgent')) colorClass = 'pip-marker-red';
+    else if (hasActivePri('high')) colorClass = 'pip-marker-amber';
+    const pulseClass = !allDone ? ' pip-marker-pulse' : '';
+    const addrClass = g.isAddr ? ' pip-marker-addr' : '';
+    const sz = 22 + Math.min(activeTasks.length, 5) * 4;
+
+    const el = document.createElement('div');
+    el.className = `pip-marker ${colorClass}${pulseClass}${addrClass}`;
+    el.style.width = sz + 'px'; el.style.height = sz + 'px';
+    el.textContent = activeTasks.length > 0 ? activeTasks.length : '✓';
+
+    let popupHtml = `<div class="popup-loc">${escHtml(g.name)}</div>`;
+    tasks.forEach(t => {
+      const dl = t.deadlineId ? getDeadline(t.deadlineId) : null;
+      const dlLabel = dl ? ` <span style="color:var(--pip-green-dark)">[${escHtml(dl.title)}]</span>` : '';
+      popupHtml += `<div class="popup-task"><span class="status-dot dot-${t.status}"></span>
+        <span class="${t.status==='finished'||t.status==='discarded'?'status-'+t.status:''}">${escHtml(t.text)}${dlLabel}</span></div>`;
+    });
+
+    const popup = new maplibregl.Popup({ offset: sz/2, maxWidth: '260px' }).setHTML(popupHtml);
+    g.marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([g.lng, g.lat])
+      .setPopup(popup)
+      .addTo(osloMap);
+  });
+
+  // Task list panel
+  if (!mapGroups.length) {
+    taskEmpty.style.display = 'block'; taskList.innerHTML = ''; return;
+  }
+  taskEmpty.style.display = 'none';
+  taskList.innerHTML = mapGroups.map((g, i) => `<div style="margin-bottom:8px;">
+      <div style="font-size:11px;letter-spacing:2px;color:var(--pip-green-dim);text-transform:uppercase;margin-bottom:3px;cursor:pointer;"
+        onclick="panToGroup(${i})">${g.isAddr ? '@ ' : ''}${escHtml(g.name)}</div>
+      ${g.tasks.map(t => `<div class="goal-task-item">
+        <span class="status-dot dot-${t.status}"></span>
+        <span class="${t.status==='finished'||t.status==='discarded'?'status-'+t.status:''}">${escHtml(t.text)}</span>
+        ${statusButtons(t)}
+      </div>`).join('')}
+    </div>`).join('');
+}
+
+function panToGroup(i) {
+  const g = mapGroups[i];
+  if (!g || !osloMap) return;
+  osloMap.flyTo({ center: [g.lng, g.lat], zoom: g.isAddr ? 17 : 16 });
+  if (g.marker && !g.marker.getPopup().isOpen()) g.marker.togglePopup();
+}
+
+// ==================== SLEEP STATS/CHART ====================
+function renderSleepStats() {
+  const entries = filterRange(S.sleep); const n = entries.length;
+  if (!n) {
+    document.getElementById('sleepAvgHours').innerHTML='--<span class="stat-unit">h</span>';
+    document.getElementById('sleepTotalHours').innerHTML='--<span class="stat-unit">h</span>';
+    document.getElementById('sleepAvgBed').textContent='--:--';
+    document.getElementById('sleepAvgWake').textContent='--:--';
+    document.getElementById('sleepEntries').textContent='0'; return;
+  }
+  const tot=entries.reduce((s,e)=>s+e.hours,0);
+  document.getElementById('sleepAvgHours').innerHTML=(tot/n).toFixed(1)+'<span class="stat-unit">h</span>';
+  document.getElementById('sleepTotalHours').innerHTML=tot.toFixed(1)+'<span class="stat-unit">h</span>';
+  document.getElementById('sleepAvgBed').textContent=avgTime(entries.map(e=>e.bedtime));
+  document.getElementById('sleepAvgWake').textContent=avgTime(entries.map(e=>e.wake));
+  document.getElementById('sleepEntries').textContent=n;
+}
+
+function renderSleepChart() {
+  const entries=filterRange(S.sleep).sort((a,b)=>a.date.localeCompare(b.date));
+  const c=document.getElementById('sleepChart'),l=document.getElementById('sleepChartLabels'),em=document.getElementById('sleepChartEmpty');
+  if(!entries.length){c.innerHTML='';l.innerHTML='';c.style.display='none';l.style.display='none';em.style.display='block';return;}
+  c.style.display='flex';l.style.display='flex';em.style.display='none';
+  const mx=Math.max(10,...entries.map(e=>e.hours));
+  c.innerHTML=entries.map(e=>`<div class="bar-col" title="${e.date}: ${e.hours}h"><div class="bar" style="height:${(e.hours/mx)*100}%"></div></div>`).join('');
+  l.innerHTML=entries.map(e=>`<span>${shortD(e.date)}</span>`).join('');
+}
+
+// ==================== SCREEN STATS/CHART ====================
+function renderScreenStats() {
+  const entries=filterRange(S.screen); const n=entries.length;
+  if(!n){
+    ['screenAvgTotal','screenTotalAll','screenAvgSocial','screenTotalSocial'].forEach(id=>document.getElementById(id).innerHTML='--<span class="stat-unit">h</span>');
+    document.getElementById('screenSocialPct').innerHTML='--<span class="stat-unit">%</span>'; return;
+  }
+  const ta=entries.reduce((s,e)=>s+e.total,0), ts=entries.reduce((s,e)=>s+e.social,0);
+  document.getElementById('screenAvgTotal').innerHTML=(ta/n).toFixed(1)+'<span class="stat-unit">h</span>';
+  document.getElementById('screenTotalAll').innerHTML=ta.toFixed(1)+'<span class="stat-unit">h</span>';
+  document.getElementById('screenAvgSocial').innerHTML=(ts/n).toFixed(1)+'<span class="stat-unit">h</span>';
+  document.getElementById('screenTotalSocial').innerHTML=ts.toFixed(1)+'<span class="stat-unit">h</span>';
+  document.getElementById('screenSocialPct').innerHTML=(ta>0?(ts/ta*100).toFixed(0):0)+'<span class="stat-unit">%</span>';
+}
+
+function renderScreenChart() {
+  const entries=filterRange(S.screen).sort((a,b)=>a.date.localeCompare(b.date));
+  const c=document.getElementById('screenChart'),l=document.getElementById('screenChartLabels'),em=document.getElementById('screenChartEmpty');
+  if(!entries.length){c.innerHTML='';l.innerHTML='';c.style.display='none';l.style.display='none';em.style.display='block';return;}
+  c.style.display='flex';l.style.display='flex';em.style.display='none';
+  const mx=Math.max(8,...entries.map(e=>e.total));
+  c.innerHTML=entries.map(e=>`<div class="bar-col" title="${e.date}: ${e.total}h total, ${e.social}h social"><div style="width:100%;max-width:36px;position:relative;height:${(e.total/mx)*100}%"><div class="bar" style="height:100%;opacity:0.4;position:absolute;bottom:0;width:100%"></div><div class="bar" style="height:${e.total>0?(e.social/e.total*100):0}%;opacity:0.9;position:absolute;bottom:0;width:100%"></div></div></div>`).join('');
+  l.innerHTML=entries.map(e=>`<span>${shortD(e.date)}</span>`).join('');
+}
+
+// ==================== LOG ====================
+function renderLog() {
+  const sl=filterRange(S.sleep), sc=filterRange(S.screen);
+  const slB=document.getElementById('sleepLogBody'), scB=document.getElementById('screenLogBody');
+  document.getElementById('sleepLogEmpty').style.display=sl.length?'none':'block';
+  document.getElementById('sleepLogTable').style.display=sl.length?'':'none';
+  document.getElementById('screenLogEmpty').style.display=sc.length?'none':'block';
+  document.getElementById('screenLogTable').style.display=sc.length?'':'none';
+
+  slB.innerHTML=sl.map(e=>`<tr><td>${fmtDate(e.date)}</td><td>${e.bedtime}</td><td>${e.wake}</td><td>${e.hours}h</td><td><button class="act-btn" onclick="editSleep('${e.date}')">[e]</button><button class="act-btn del" onclick="delSleep('${e.date}')">[x]</button></td></tr>`).join('');
+  scB.innerHTML=sc.map(e=>`<tr><td>${fmtDate(e.date)}</td><td>${e.total}h</td><td>${e.social}h</td><td>${e.total>0?(e.social/e.total*100).toFixed(0):0}%</td><td><button class="act-btn" onclick="editScreen('${e.date}')">[e]</button><button class="act-btn del" onclick="delScreen('${e.date}')">[x]</button></td></tr>`).join('');
+}
+
+// ==================== UTIL ====================
+function escHtml(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent='> '+tr(msg);
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2000);
+}
+
+function exportData() {
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='pipboy_metrics_'+todayStr()+'.json'; a.click(); toast('DATA EXPORTED');
+}
+
+// Merge by id (or date for sleep/screen), so importing never wipes what you already have.
+function mergeBy(cur, inc, key) {
+  const m = new Map((cur||[]).map(x => [x[key], x]));
+  (inc||[]).forEach(x => { if (x && x[key] != null) m.set(x[key], { ...(m.get(x[key])||{}), ...x }); });
+  return [...m.values()];
+}
+
+function importData(event) {
+  const f=event.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=function(e){
+    try{
+      const p=JSON.parse(e.target.result);
+      S.sleep = mergeBy(S.sleep, p.sleep, 'date');
+      S.screen = mergeBy(S.screen, p.screen, 'date');
+      S.deadlines = mergeBy(S.deadlines, p.deadlines, 'id');
+      S.tasks = mergeBy(S.tasks, p.tasks, 'id');
+      S.places = mergeBy(S.places, p.places, 'id');
+      S.groups = mergeBy(S.groups, p.groups, 'id');
+      if (p.goals) S.goals = { ...S.goals, ...p.goals };
+      if (p.places && p.places.some(x=>x.home)) { const h = p.places.find(x=>x.home); S.places.forEach(x => { x.home = x.id === h.id; }); }
+      S = normalizeState(S);
+      save(); render(); refreshWeatherWarnings();
+      toast('DATA IMPORTED');
+    }catch(err){ console.error(err); toast('IMPORT FAILED'); }
+  };
+  r.readAsText(f); event.target.value='';
+}
+
+function clearAllData() {
+  if(!confirm('PURGE ALL DATA? This cannot be undone.'))return;
+  S=normalizeState({ settings: S.settings });
+  save(); render(); toast('ALL DATA PURGED');
+}
+
+// ==================== INIT ====================
+function init() {
+  initDisplay();
+  initMapDisplay();
+  load();
+  const td = todayStr();
+  document.getElementById('sleepDate').value = td;
+  document.getElementById('screenDate').value = td;
+  document.getElementById('dlDate').value = td;
+  document.getElementById('travelDate').value = td;
+  updateClock();
+  setInterval(updateClock, 15000);
+  render();
+  initLang();
+  refreshWeatherWarnings();
+  initSync();
+}
+
+init();
+</script>
+</body>
+</html>
