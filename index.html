@@ -3011,7 +3011,7 @@ function importCourseJson() {
     const norm = d.lectures.filter(x => x && (x.title || x.url)).map((x, i) => ({
       id: String(x.id || x.url || (x.chapter || '') + '|' + x.title || i),
       title: String(x.title || x.url), platform: String(x.platform || ''), url: String(x.url || ''),
-      chapter: String(x.chapter || ''), minutes: +x.minutes || 0, order: +x.order || i,
+      chapter: String(x.chapter || ''), category: String(x.category || ''), minutes: +x.minutes || 0, order: +x.order || i,
     }));
     c.lectures = mergeBy(c.lectures || [], norm, 'id'); n++;
   }
@@ -3093,21 +3093,8 @@ function renderCourses() {
     html += `<div class="empty-state">${tr('NO PROGRESS PLAN YET. PASTE IT AS JSON UNDER COURSE SETTINGS BELOW.')}</div>`;
   }
 
-  // Lectures
-  const lec = [...(c.lectures || [])].sort((a, b) => (a.chapter || '').localeCompare(b.chapter || '', 'nb', { numeric: true }) || (a.order || 0) - (b.order || 0));
-  html += `<div class="panel-title" style="margin-top:16px">// ${tr('Lectures')} ${lec.length ? '(' + st.lec.done + '/' + lec.length + ')' : ''}</div>`;
-  if (!lec.length) html += `<div class="field-help">${tr('No lectures registered yet. Paste the list (JSON) under course settings below.')}</div>`;
-  let lastCh = null;
-  lec.forEach(x => {
-    if (x.chapter !== lastCh) { lastCh = x.chapter; if (x.chapter) html += `<div class="cal-agenda-day" data-noi18n>${escHtml(x.chapter)}</div>`; }
-    const w = c.watched && c.watched[x.id];
-    const safeUrl = /^https:\/\//.test(x.url || '') ? x.url : '';
-    html += `<div class="lec-row ${w ? 'done' : ''}">
-      <input type="checkbox" ${w ? 'checked' : ''} onchange="toggleLecture(this.dataset.id)" data-id="${escAttr(x.id)}">
-      <div class="grow"><span data-noi18n>${escHtml(x.title)}</span><div class="lec-meta">${escHtml(x.platform || '')}${x.minutes ? ' · ' + x.minutes + ' min' : ''}${w ? ' · ' + tr('watched') + ' ' + shortD(w) : ''}</div></div>
-      ${safeUrl ? `<a class="act-btn" href="${escAttr(safeUrl)}" target="_blank" rel="noopener">${tr('open')}</a>` : ''}
-    </div>`;
-  });
+  // Lectures: grouped by chapter (collapsible), filter on category
+  html += lecturesHtml(c, st, today);
 
   // Settings / import
   const dlOpts = '<option value="">—</option>' + [...S.deadlines].sort(byDl).map(d => `<option data-noi18n value="${escAttr(d.id)}" ${d.id === c.examId ? 'selected' : ''}>${escHtml(d.title)}</option>`).join('');
@@ -3133,6 +3120,55 @@ function renderCourses() {
     </div></details>`;
 
   view.innerHTML = html;
+}
+
+let lecCat = 'all';
+const lecOpen = new Map();   // chapter -> open/closed when toggled by hand
+function setLecCat(v) { lecCat = v; renderCourses(); }
+function toggleLecChapter(ch, open) { lecOpen.set(ch, !open); renderCourses(); }
+function toggleLecChapterAll(ch) {
+  const c = getCourse(curCourse); if (!c) return;
+  const list = (c.lectures || []).filter(x => x.chapter === ch && (lecCat === 'all' || x.category === lecCat));
+  c.watched = c.watched || {};
+  const all = list.every(x => c.watched[x.id]);
+  list.forEach(x => { if (all) delete c.watched[x.id]; else if (!c.watched[x.id]) c.watched[x.id] = todayStr(); });
+  save(); renderCourses();
+}
+
+function lecturesHtml(c, st, today) {
+  const all = [...(c.lectures || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+  let h = `<div class="panel-title" style="margin-top:16px">// ${tr('Lectures')} ${all.length ? '(' + st.lec.done + '/' + all.length + ')' : ''}</div>`;
+  if (!all.length) return h + `<div class="field-help">${tr('No lectures registered yet. Paste the list (JSON) under course settings below.')}</div>`;
+  const cats = [...new Set(all.map(x => x.category).filter(Boolean))];
+  if (cats.length > 1) h += `<div class="course-filters"><button class="range-btn ${lecCat === 'all' ? 'active' : ''}" onclick="setLecCat('all')">${tr('All')}</button>` +
+    cats.map(k => `<button class="range-btn ${lecCat === k ? 'active' : ''}" data-cat="${escAttr(k)}" onclick="setLecCat(this.dataset.cat)" data-noi18n>${escHtml(k)}</button>`).join('') + '</div>';
+  const list = all.filter(x => lecCat === 'all' || x.category === lecCat);
+  // The chapter of this week's lessons opens by itself
+  const wk = (c.weeks || []).find(w => w.from <= today && today <= w.to);
+  const nowTopics = wk ? (wk.lessons || []).flatMap(l => l.topics || []).map(t => t.toLowerCase()) : [];
+  const chapters = [...new Set(list.map(x => x.chapter || ''))];
+  chapters.forEach(ch => {
+    const items = list.filter(x => (x.chapter || '') === ch);
+    const done = items.filter(x => c.watched && c.watched[x.id]).length;
+    const auto = !!ch && nowTopics.includes(ch.toLowerCase());
+    const open = lecOpen.has(ch) ? lecOpen.get(ch) : auto;
+    h += `<div class="wk ${auto ? 'current' : ''}"><div class="wk-head" data-ch="${escAttr(ch)}" onclick="toggleLecChapter(this.dataset.ch, ${open})">
+        <span>${open ? '&#9662;' : '&#9656;'}</span><span class="grow" data-noi18n>${escHtml(ch || '—')}</span>
+        <span class="mini">${done}/${items.length}</span>
+        <button class="act-btn" data-ch="${escAttr(ch)}" onclick="event.stopPropagation();toggleLecChapterAll(this.dataset.ch)">${done === items.length ? '&#8634;' : '&#10003; ' + tr('all')}</button></div>
+      <div class="prog-bar" style="height:3px"><div style="width:${pct(done, items.length)}%"></div></div>`;
+    if (open) h += '<div style="padding:0 8px">' + items.map(x => {
+      const w = c.watched && c.watched[x.id];
+      const safeUrl = /^https:\/\//.test(x.url || '') ? x.url : '';
+      return `<div class="lec-row ${w ? 'done' : ''}">
+        <input type="checkbox" ${w ? 'checked' : ''} onchange="toggleLecture(this.dataset.id)" data-id="${escAttr(x.id)}">
+        <div class="grow"><span data-noi18n>${escHtml(x.title)}</span><div class="lec-meta" data-noi18n>${escHtml([x.platform, x.category].filter(Boolean).join(' · '))}${x.minutes ? ' · ' + x.minutes + ' min' : ''}${w ? ' · ✓ ' + shortD(w) : ''}</div></div>
+        ${safeUrl ? `<a class="act-btn" href="${escAttr(safeUrl)}" target="_blank" rel="noopener">${tr('open')}</a>` : ''}
+      </div>`;
+    }).join('') + '</div>';
+    h += '</div>';
+  });
+  return h;
 }
 
 function lessonHtml(c, l, today) {
