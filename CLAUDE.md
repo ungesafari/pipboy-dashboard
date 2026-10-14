@@ -18,25 +18,38 @@ Published with GitHub Pages so it can be opened from both phone and laptop. **Fa
 
 ### State Model
 ```js
-{ sleep: [], screen: [], deadlines: [], tasks: [], goals: {}, places: [], groups: [], settings: {}, meta: {} }
+{ sleep: [], screen: [], deadlines: [], tasks: [], goals: {}, places: [], groups: [], courses: [], settings: {}, meta: {} }
 // task: { id, text, desc, status, groupId, important, steps: [{id,text,done}], deadlineId, sub5min,
 //         location, placeId, geo, date, time, gcalId, created }
-// deadline: { id, title, date ('' = not known yet), time, priority, gcalId }
+// deadline ("important date"): { id, title, date ('' = not known yet), estDate (assumed EARLIEST date when unknown), time, priority, gcalId }
+// course: { id, name, short, code, examId, start, end, placeId, calMatch, weeks: [{ id, week, from, to, note,
+//           lessons: [{ id, label, date, start?, end?, topics: [], items: { class, hw, e1, e2: [strings] } }] }],
+//           lectures: [{ id, title, platform, url, chapter, minutes, order }], done: { itemId: date }, watched: { lectureId: date } }
 // place: { id, name, label, lat, lng, home? }   group: { id, name }
 // settings: { googleClientId, maptilerKey }      meta: { updatedAt }  (sync: last write wins)
 ```
 `normalizeState()` fills defaults (incl. `DEFAULT_GROUPS`) for loaded, imported and synced data.
 
 ### 6 Tabs
-1. **Home** — daily summary, averages, goal of the day, urgent deadlines
-2. **Calendar** — month grid / 30-day agenda of deadlines, dated tasks and Google Calendar events; day detail list
-3. **Deadlines** — priority-based deadline tracker (urgent/high/normal/low); date may be empty ("not known yet", sorts last)
-4. **Tasks** — sub-tabs:
+1. **Home** — daily summary, averages, goal of the day, upcoming important dates
+2. **Calendar** — views 1 day / **3 days (default)** / 7 days as hour-based timetable grids, plus Month and Agenda. Shows important dates, dated tasks, course lessons and Google Calendar events; day detail list. The **"Important dates"** button opens the former Deadlines tab as a panel here (form + list)
+3. **Tasks** — sub-tabs:
    - *All Tasks*: form with one field per row (title, description, group, ★ important, deadline chips + quick-create, place, address, date, time, Easy-fix, subtasks). List is grouped: ★ Important first, then each group (collapsible), then ungrouped. Status flow: active → in_progress → finished/discarded. Default filter "Open"
    - *Easy-fix*: quick tasks under 5 minutes
    - *Reiseplan*: travel planner
+4. **Courses** ("Fag") — digitized progress plans: weeks → lessons → checkable items per level (I timen / Lekser / E1 / E2), progress per level, "behind" count (in-class + homework from past lessons), lecture tracking (Itslearning / FlipClass videos), per-course settings and JSON import
 5. **Map** — Oslo vector tile map with task markers (55 neighborhoods in `OSLO_LOCATIONS`) and the "Lagrede steder" (saved places) manager
 6. **Log** — Sleep, Screen time and Data sub-sections. Data has export/import (import **merges** by id/date) and "Sync & Connections" (Gist sync, Google Client ID, MapTiler key)
+
+### Important dates (formerly "Deadlines")
+- A date may be unknown: then `estDate` is the assumed **earliest** possible date. `effDate(d)` = date || estDate is used for sorting, countdowns ("≤ N days, at the earliest") and the calendar (dashed/italic). This avoids false comfort for unknown exam dates
+- Only real dates can be pushed to Google Calendar
+
+### Courses
+- Plans are data, never code (they contain personal/teacher info). Personal plan file: `fag-r1-fysikk.json` (git-ignored), imported via Log → Data
+- Item strings expand: `"1.14-1.17"` → one checkbox per exercise; `*` = programming task. Item id = `lessonId|level|label`, so progress (`done`) survives re-importing a corrected plan
+- Lessons appear in the calendar with the course's default time (`start`/`end`, per-lesson override). If a Google event overlaps and its title contains `calMatch`, the lesson is hidden in the grid to avoid duplicates
+- Lectures import: paste JSON `{ "lectures": [{ id, title, platform, url, chapter, minutes, order }] }` in the course settings; merged by id, `watched` progress kept
 
 ### Header & display controls
 - Top-left fixed controls (always visible): theme toggle, brightness (Dark/Med/Light), language (NO/EN)

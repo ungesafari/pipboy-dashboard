@@ -25,6 +25,7 @@
     --pip-red: #fe1414;
     --pip-red-dim: #a01010;
     --pip-cyan: #14fefe;
+    --pip-violet: #c08cff;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -624,6 +625,80 @@
   body[data-theme="standard"] .cal-dot.k-g { background: #1a73e8; }
   body[data-theme="standard"] .cal-cell { border-radius: 4px; }
 
+  /* Time grid (1 / 3 / 7 days) */
+  .tg { --hour: 42px; display: grid; grid-template-columns: 40px repeat(var(--cols), minmax(0, 1fr)); }
+  .tg-dayhead { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--pip-green-dim); text-align: center; padding: 4px 2px; cursor: pointer; border-bottom: 1px solid var(--pip-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tg-dayhead b { display: block; font-size: 15px; color: var(--pip-green); letter-spacing: 0; }
+  .tg-dayhead.today b { text-decoration: underline; }
+  .tg-dayhead.sel { background: var(--pip-panel); }
+  .tg-gutter { font-size: 9px; color: var(--pip-green-dim); text-align: right; padding-right: 4px; position: relative; }
+  .tg-allday { border-bottom: 1px solid var(--pip-border); padding: 2px; min-height: 22px; border-left: 1px solid var(--pip-green-dark); }
+  .tg-col { position: relative; border-left: 1px solid var(--pip-green-dark);
+    background-image: repeating-linear-gradient(to bottom, var(--pip-green-dark) 0, var(--pip-green-dark) 1px, transparent 1px, transparent var(--hour)); }
+  .tg-col.today { background-color: var(--pip-panel); }
+  .tg-hour { position: absolute; right: 4px; transform: translateY(-50%); }
+  .tg-ev { position: absolute; overflow: hidden; font-size: 10px; line-height: 1.25; padding: 1px 3px; cursor: pointer;
+    background: var(--pip-bg); border: 1px solid var(--pip-green-dim); border-left: 3px solid var(--pip-green); color: var(--pip-green); }
+  .tg-ev .t { color: var(--pip-green-dim); }
+  .tg-ev.k-g { border-left-color: var(--pip-cyan); border-color: var(--pip-green-dark); color: var(--pip-green-dim); }
+  .tg-ev.k-dl { border-left-color: var(--pip-amber); }
+  .tg-ev.k-dl.pri-urgent-b { border-left-color: var(--pip-red); }
+  .tg-ev.k-les { border-left-color: var(--pip-violet); }
+  .tg-ev.done { opacity: 0.55; text-decoration: line-through; }
+  .tg-chip { font-size: 10px; padding: 1px 3px; margin-bottom: 2px; border-left: 3px solid var(--pip-amber); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .tg-chip.k-task { border-left-color: var(--pip-green); }
+  .tg-chip.k-g { border-left-color: var(--pip-cyan); color: var(--pip-green-dim); }
+  .tg-chip.est, .cal-item.est, .tg-ev.est { border-style: dashed; font-style: italic; }
+  .tg-now { position: absolute; left: 0; right: 0; height: 2px; background: var(--pip-red); z-index: 2; }
+  .cal-item.k-les { border-left-color: var(--pip-violet); }
+  .cal-dot.k-les { background: var(--pip-violet); }
+  body[data-theme="standard"] .tg-ev { background: #fff; border-radius: 4px; }
+  body[data-theme="standard"] .tg-ev.k-g { border-left-color: #1a73e8; }
+  @media (max-width: 700px) { .tg { --hour: 36px; grid-template-columns: 30px repeat(var(--cols), minmax(0, 1fr)); } .tg-ev { font-size: 9px; } }
+  .est-tag { font-size: 9px; letter-spacing: 1px; color: var(--pip-amber); border: 1px dashed var(--pip-amber); padding: 0 4px; margin-left: 4px; }
+
+  /* Courses / progress plans */
+  .course-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .course-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; margin-bottom: 10px; }
+  .course-head h2 { font-size: 16px; font-weight: normal; letter-spacing: 2px; text-transform: uppercase; }
+  .course-exam { font-size: 11px; color: var(--pip-green-dim); letter-spacing: 1px; }
+  .prog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .prog-box { border: 1px solid var(--pip-green-dark); padding: 8px; }
+  .prog-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--pip-green-dim); }
+  .prog-num { font-size: 18px; margin: 2px 0 4px; }
+  .prog-bar { height: 6px; background: var(--pip-green-dark); }
+  .prog-bar > div { height: 100%; background: var(--pip-green); }
+  .prog-box.warn .prog-num { color: var(--pip-amber); }
+  .course-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .wk { border: 1px solid var(--pip-green-dark); margin-bottom: 8px; }
+  .wk-head { display: flex; gap: 8px; align-items: center; padding: 6px 8px; cursor: pointer; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
+  .wk-head .grow { flex: 1; }
+  .wk-head .mini { font-size: 10px; color: var(--pip-green-dim); letter-spacing: 1px; }
+  .wk.current { border-color: var(--pip-green); }
+  .wk-note { font-size: 11px; color: var(--pip-amber); padding: 0 8px 6px; }
+  .les { border-top: 1px solid var(--pip-green-dark); padding: 8px; }
+  .les-head { font-size: 12px; margin-bottom: 4px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+  .les-head .when { color: var(--pip-green-dim); font-size: 11px; }
+  .les-topics { font-size: 11px; color: var(--pip-green-dim); margin-bottom: 6px; line-height: 1.5; }
+  .lvl { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0; }
+  .lvl-name { width: 58px; flex-shrink: 0; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--pip-green-dim); padding-top: 4px; }
+  .lvl-items { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; }
+  .ex { font-family: inherit; font-size: 11px; padding: 2px 6px; background: transparent; color: var(--pip-green); border: 1px solid var(--pip-border); cursor: pointer; }
+  .ex.prog { border-style: dashed; }
+  .ex.done { background: var(--pip-green); color: var(--pip-bg); border-color: var(--pip-green); }
+  .ex.txt { text-align: left; width: 100%; }
+  .ex.txt.done { text-decoration: line-through; }
+  .ex.late:not(.done) { border-color: var(--pip-amber); color: var(--pip-amber); }
+  .lvl-all { font-size: 10px; }
+  .lec-row { display: flex; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--pip-green-dark); font-size: 12px; }
+  .lec-row .grow { flex: 1; min-width: 0; }
+  .lec-row.done .grow > span:first-child { text-decoration: line-through; color: var(--pip-green-dim); }
+  .lec-meta { font-size: 10px; color: var(--pip-green-dim); letter-spacing: 1px; }
+  .course-admin { margin-top: 14px; }
+  .course-admin summary { cursor: pointer; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--pip-green-dim); padding: 6px 0; }
+  body[data-theme="standard"] .ex { border-radius: 4px; }
+  body[data-theme="standard"] .wk, body[data-theme="standard"] .prog-box { border-radius: 6px; }
+
   /* Connections / sync */
   .conn-block { border-top: 1px solid var(--pip-green-dark); padding-top: 10px; margin-top: 10px; }
   .conn-status { font-size: 11px; color: var(--pip-green-dim); letter-spacing: 1px; margin: 4px 0; }
@@ -727,6 +802,7 @@
     --pip-red-dim: #b0605a;
     --std-accent: #188038;
     --std-accent-dim: #6a9c78;
+    --pip-violet: #7b4fd6;
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   }
   body[data-theme="standard"][data-brightness="medium"] {
@@ -824,8 +900,8 @@
   <div class="pip-tabs">
     <button class="pip-tab active" data-section="home" onclick="switchSection('home')">Home</button>
     <button class="pip-tab" data-section="calendar" onclick="switchSection('calendar')">Calendar</button>
-    <button class="pip-tab" data-section="deadlines" onclick="switchSection('deadlines')">Deadlines</button>
     <button class="pip-tab" data-section="tasks" onclick="switchSection('tasks')">Tasks</button>
+    <button class="pip-tab" data-section="courses" onclick="switchSection('courses')">Courses</button>
     <button class="pip-tab" data-section="map" onclick="switchSection('map')">Map</button>
     <button class="pip-tab" data-section="log" onclick="switchSection('log')">Log</button>
   </div>
@@ -853,9 +929,9 @@
     </div>
 
     <div class="panel">
-      <div class="panel-title">// Urgent Deadlines</div>
+      <div class="panel-title">// Important Dates</div>
       <div id="homeUrgentDeadlines"></div>
-      <div class="empty-state" id="homeUrgentEmpty">NO URGENT DEADLINES</div>
+      <div class="empty-state" id="homeUrgentEmpty">NO IMPORTANT DATES COMING UP</div>
     </div>
 
     <div class="panel">
@@ -880,27 +956,28 @@
         <button class="range-btn" onclick="calMove(1)">&rsaquo;</button>
         <button class="range-btn" onclick="calToday()">Today</button>
         <span class="sep" style="width:8px"></span>
+        <button class="range-btn" data-calview="d1" onclick="setCalView('d1')">1 day</button>
+        <button class="range-btn" data-calview="d3" onclick="setCalView('d3')">3 days</button>
+        <button class="range-btn" data-calview="d7" onclick="setCalView('d7')">7 days</button>
         <button class="range-btn" data-calview="month" onclick="setCalView('month')">Month</button>
         <button class="range-btn" data-calview="agenda" onclick="setCalView('agenda')">Agenda</button>
-        <span class="sep" style="width:8px"></span>
+      </div>
+      <div class="cal-toolbar">
+        <button class="pip-btn sm" id="impBtn" onclick="toggleImpPanel()">&#9873; Important dates</button>
         <button class="range-btn" id="gcalBtn" onclick="gcalConnect()">Connect Google</button>
       </div>
       <div class="conn-status" id="gcalStatus"></div>
       <div id="calBody"></div>
     </div>
+    <div id="impPanel" style="display:none">
     <div class="panel">
-      <div class="panel-title">// <span id="calDayTitle"></span></div>
-      <div id="calDayList"></div>
-    </div>
-  </div>
-
-  <!-- ==================== DEADLINES ==================== -->
-  <div class="section" id="section-deadlines">
-    <div class="panel">
-      <div class="panel-title">// <span id="dlFormTitle">Add Deadline</span></div>
+      <div class="panel-title">// <span id="dlFormTitle">Add important date</span></div>
       <div class="input-row">
-        <div class="input-group"><label>Title</label><input type="text" class="pip-input wide" id="dlTitle" placeholder="Deadline name" maxlength="100"></div>
-        <div class="input-group"><label>Due Date (empty = not known yet)</label><input type="date" class="pip-input" id="dlDate"></div>
+        <div class="input-group"><label>Title</label><input type="text" class="pip-input wide" id="dlTitle" placeholder="E.g. exam, test, hand-in" maxlength="100"></div>
+        <label class="pip-checkbox"><input type="checkbox" id="dlUnknown" onchange="syncDlUnknown()"> Date not known yet</label>
+        <div class="input-group" id="dlDateGroup"><label>Date</label><input type="date" class="pip-input" id="dlDate"></div>
+        <div class="input-group" id="dlEstGroup" style="display:none"><label>Assumed date (the earliest it could be)</label><input type="date" class="pip-input" id="dlEst">
+          <div class="field-help">Pick the earliest date it can realistically be. Countdowns use this date, so an unknown date never feels further away than it is.</div></div>
         <div class="input-group"><label>Time (optional)</label><input type="time" class="pip-input" id="dlTime" value=""></div>
         <div class="input-group">
           <label>Priority</label>
@@ -918,9 +995,15 @@
     </div>
 
     <div class="panel">
-      <div class="panel-title">// Active Deadlines</div>
+      <div class="panel-title">// Important Dates</div>
       <div id="deadlineList"></div>
-      <div class="empty-state" id="deadlineEmpty">NO DEADLINES SET</div>
+      <div class="empty-state" id="deadlineEmpty">NO IMPORTANT DATES</div>
+    </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">// <span id="calDayTitle"></span></div>
+      <div id="calDayList"></div>
     </div>
   </div>
 
@@ -1022,6 +1105,14 @@
         <div class="travel-note" id="travelNote"></div>
       </div>
       <div id="travelPlan"></div>
+    </div>
+  </div>
+
+  <!-- ==================== COURSES ==================== -->
+  <div class="section" id="section-courses">
+    <div class="panel">
+      <div class="course-tabs" id="courseTabs"></div>
+      <div id="courseView"></div>
     </div>
   </div>
 
@@ -1236,6 +1327,7 @@ function normalizeState(p) {
     sleep: p.sleep || [], screen: p.screen || [], deadlines: p.deadlines || [], tasks: p.tasks || [], goals: p.goals || {},
     places: Array.isArray(p.places) ? p.places : [],
     groups: Array.isArray(p.groups) ? p.groups : defaultGroups(),
+    courses: Array.isArray(p.courses) ? p.courses : [],
     settings: p.settings || {}, meta: p.meta || {},
   };
   // Older versions called the home place "Hjem"
@@ -1398,20 +1490,34 @@ function timeUntil(dateStr, timeStr) {
   return { days, hrs, mins, totalMins, past: diff < 0 };
 }
 
+// An important date may be unknown; then estDate is the earliest it can realistically be.
+function effDate(d) { return d.date || d.estDate || ''; }
+function isEst(d) { return !d.date && !!d.estDate; }
+function dlDateLabel(d) {
+  if (d.date) return d.date;
+  if (d.estDate) return '~' + d.estDate + ' <span class="est-tag">assumed</span>';
+  return tr('Date not known');
+}
+
 function fmtCountdown(d) {
-  if (!d.date) return { main: '?', sub: 'date not known' };
-  const tu = timeUntil(d.date, d.time);
+  const date = effDate(d);
+  if (!date) return { main: '?', sub: 'date not known' };
+  const est = isEst(d);
+  const tu = timeUntil(date, d.time);
   if (tu.past) {
+    if (est) return { main: '?', sub: 'assumed date passed – check' };
     if (tu.days > 0) return { main: 'OVERDUE', sub: tu.days+'d '+tu.hrs+'h ago' };
     if (tu.hrs > 0) return { main: 'OVERDUE', sub: tu.hrs+'h '+tu.mins+'m ago' };
     return { main: 'OVERDUE', sub: tu.mins+'m ago' };
   }
+  const pre = est ? '&le; ' : '';
+  const sub = est ? 'at the earliest' : 'remaining';
   if (tu.days > 0) {
     const extra = d.time ? ' '+tu.hrs+'h' : '';
-    return { main: tu.days+'<span class="stat-unit"> day'+(tu.days!==1?'s':'')+'</span>'+extra, sub: 'remaining' };
+    return { main: pre+tu.days+'<span class="stat-unit"> '+(tu.days!==1?'days':'day')+'</span>'+extra, sub };
   }
-  if (tu.hrs > 0) return { main: tu.hrs+'h '+tu.mins+'m', sub: 'remaining' };
-  return { main: tu.mins+'<span class="stat-unit"> min</span>', sub: 'remaining' };
+  if (tu.hrs > 0) return { main: pre+tu.hrs+'h '+tu.mins+'m', sub };
+  return { main: pre+tu.mins+'<span class="stat-unit"> min</span>', sub };
 }
 
 function isDeadlinePast(d) {
@@ -1434,7 +1540,7 @@ function avgTime(times) {
 
 // ==================== DEADLINE HELPERS ====================
 // Deadlines without a date sort last
-function byDl(a, b) { return ((a.date||'9999-12-31')+(a.time||'')).localeCompare((b.date||'9999-12-31')+(b.time||'')); }
+function byDl(a, b) { return ((effDate(a)||'9999-12-31')+(a.time||'')).localeCompare((effDate(b)||'9999-12-31')+(b.time||'')); }
 function getDeadline(id) { return S.deadlines.find(d=>d.id===id); }
 function deadlineTasks(dlId) { return S.tasks.filter(t=>t.deadlineId===dlId); }
 function deadlineActiveTasks(dlId) { return deadlineTasks(dlId).filter(t=>t.status==='active'||t.status==='in_progress'); }
@@ -1521,47 +1627,74 @@ function cancelEditScreen() {
 function delScreen(d) { S.screen=S.screen.filter(e=>e.date!==d); save(); render(); }
 
 // ==================== DEADLINES ====================
+function syncDlUnknown() {
+  const unknown = document.getElementById('dlUnknown').checked;
+  document.getElementById('dlDateGroup').style.display = unknown ? 'none' : '';
+  document.getElementById('dlEstGroup').style.display = unknown ? '' : 'none';
+}
+
 function saveDeadline() {
   const editId = document.getElementById('dlEditId').value;
   const title = document.getElementById('dlTitle').value.trim();
-  const date = document.getElementById('dlDate').value;
+  const unknown = document.getElementById('dlUnknown').checked;
+  const date = unknown ? '' : document.getElementById('dlDate').value;
+  const estDate = unknown ? document.getElementById('dlEst').value : '';
   const time = document.getElementById('dlTime').value || '';
   const pri = document.getElementById('dlPriority').value;
   if (!title) { toast('FILL IN A TITLE'); return; }
   if (editId) {
     const dl = getDeadline(editId);
-    if (dl) { dl.title=title; dl.date=date; dl.time=time; dl.priority=pri; }
+    if (dl) Object.assign(dl, { title, date, estDate, time, priority: pri });
   } else {
-    S.deadlines.push({ id: uid(), title, date, time, priority: pri });
+    S.deadlines.push({ id: uid(), title, date, estDate, time, priority: pri });
   }
   save(); cancelEditDeadline(); render();
   toast('DEADLINE '+(editId?'UPDATED':'ADDED'));
-  document.getElementById('dlTitle').value='';
-  document.getElementById('dlDate').value='';
-  document.getElementById('dlTime').value='';
-  document.getElementById('dlPriority').value='normal';
+}
+
+function resetDeadlineForm() {
+  ['dlEditId','dlTitle','dlDate','dlEst','dlTime'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('dlPriority').value = 'normal';
+  document.getElementById('dlUnknown').checked = false;
+  syncDlUnknown();
 }
 
 function editDeadline(id) {
   const dl = getDeadline(id); if(!dl) return;
+  openImpPanel();
   document.getElementById('dlEditId').value = id;
   document.getElementById('dlTitle').value = dl.title;
-  document.getElementById('dlDate').value = dl.date;
+  document.getElementById('dlUnknown').checked = !dl.date;
+  document.getElementById('dlDate').value = dl.date || '';
+  document.getElementById('dlEst').value = dl.estDate || '';
   document.getElementById('dlTime').value = dl.time || '';
   document.getElementById('dlPriority').value = dl.priority;
-  document.getElementById('dlFormTitle').textContent = 'Edit Deadline';
+  syncDlUnknown();
+  document.getElementById('dlFormTitle').textContent = tr('Edit important date');
   document.getElementById('dlCancelBtn').style.display = '';
-  switchSection('deadlines');
+  document.getElementById('dlTitle').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function cancelEditDeadline() {
-  document.getElementById('dlEditId').value = '';
-  document.getElementById('dlFormTitle').textContent = 'Add Deadline';
+  resetDeadlineForm();
+  document.getElementById('dlFormTitle').textContent = tr('Add important date');
   document.getElementById('dlCancelBtn').style.display = 'none';
 }
 
+// The important-dates panel lives on the calendar page, behind a button
+function openImpPanel() {
+  switchSection('calendar');
+  document.getElementById('impPanel').style.display = '';
+  document.getElementById('impBtn').classList.add('active');
+}
+function toggleImpPanel() {
+  const p = document.getElementById('impPanel');
+  if (p.style.display === 'none') { openImpPanel(); p.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  else { p.style.display = 'none'; document.getElementById('impBtn').classList.remove('active'); }
+}
+
 function delDeadline(id) {
-  if (!confirm('Delete deadline and unlink all tasks?')) return;
+  if (!confirm(tr('Delete this important date? Linked tasks are kept.'))) return;
   S.deadlines = S.deadlines.filter(d=>d.id!==id);
   S.tasks.forEach(t=>{ if(t.deadlineId===id) t.deadlineId=''; });
   save(); render();
@@ -1684,7 +1817,8 @@ function renderDeadlineChips() {
   const sel = document.getElementById('taskDeadline').value;
   const upcoming = S.deadlines.filter(d => !isDeadlinePast(d)).sort(byDl).slice(0, 8);
   document.getElementById('taskDlChips').innerHTML = upcoming.map(d => {
-    const when = d.date ? (daysUntil(d.date)===0 ? tr('today') : shortD(d.date) + ' · ' + daysUntil(d.date) + tr('d')) : tr('Date not known');
+    const ed = effDate(d);
+    const when = ed ? (isEst(d) ? '~' : '') + (daysUntil(ed)===0 ? tr('today') : shortD(ed) + ' · ' + daysUntil(ed) + tr('d')) : tr('Date not known');
     return `<button type="button" class="dl-chip ${d.id===sel?'sel':''} ${d.priority==='urgent'?'pri-urgent-b':d.priority==='high'?'pri-high-b':''}" onclick="chooseDeadline('${d.id}')"><span data-noi18n>${escHtml(d.title)}</span><small>${when}</small></button>`;
   }).join('');
 }
@@ -2137,7 +2271,7 @@ const I18N = [
   // Tasks
   ['All Tasks', 'Alle oppgaver'], ['Travel plan', 'Reiseplan'], ['Add Task', 'Ny oppgave'], ['Edit Task', 'Rediger oppgave'], ['Description', 'Beskrivelse'],
   ['Group', 'Gruppe'], ['No group', 'Ingen gruppe'], ['+ New group...', '+ Ny gruppe...'], ['★ Important', '★ Viktig'], ['Important', 'Viktig'],
-  ['+ New deadline', '+ Ny frist'], ['Create deadline', 'Opprett frist'], ['Place / Area', 'Sted / område'], ['None', 'Ingen'],
+  ['+ New deadline', '+ Ny viktig dato'], ['Create deadline', 'Opprett viktig dato'], ['Place / Area', 'Sted / område'], ['None', 'Ingen'],
   ['Address (optional)', 'Adresse (valgfritt)'], ['Find', 'Søk'], ['Date', 'Dato'], ['Time', 'Tid'], ['Subtasks', 'Delmål'], ['Add a step', 'Legg til et delmål'],
   ['What needs doing?', 'Hva skal gjøres?'], ['Details, notes, links', 'Detaljer, notater, lenker'], ['Search address', 'Søk adresse'], ['Areas', 'Områder'],
   ['// All Tasks', '// Alle oppgaver'], ['All', 'Alle'], ['Open', 'Åpne'], ['In Progress', 'Pågår'], ['Finished', 'Fullført'], ['Discarded', 'Forkastet'],
@@ -2188,7 +2322,7 @@ const I18N = [
   // Toasts
   ['ADD YOUR GOOGLE CLIENT ID UNDER LOG → DATA', 'LEGG INN GOOGLE CLIENT ID UNDER LOGG → DATA'], ['ALL DATA PURGED', 'ALLE DATA SLETTET'],
   ['COULD NOT LOAD GOOGLE SIGN-IN', 'KUNNE IKKE LASTE GOOGLE-INNLOGGING'], ['DATA EXPORTED', 'DATA EKSPORTERT'], ['DATA IMPORTED', 'DATA IMPORTERT'],
-  ['DEADLINE ADDED', 'FRIST LAGT TIL'], ['DEADLINE UPDATED', 'FRIST OPPDATERT'], ['ENTER A TASK', 'SKRIV INN EN OPPGAVE'], ['ENTER AN ADDRESS', 'SKRIV INN EN ADRESSE'],
+  ['DEADLINE ADDED', 'VIKTIG DATO LAGT TIL'], ['DEADLINE UPDATED', 'VIKTIG DATO OPPDATERT'], ['ENTER A TASK', 'SKRIV INN EN OPPGAVE'], ['ENTER AN ADDRESS', 'SKRIV INN EN ADRESSE'],
   ['ENTER AN API KEY', 'SKRIV INN EN API-NØKKEL'], ['FILL IN A TITLE', 'FYLL INN EN TITTEL'], ['FILL IN DATE AND TOTAL', 'FYLL INN DATO OG TOTAL'],
   ['FILL IN DATE, BEDTIME, AND WAKE TIME', 'FYLL INN DATO, LEGGETID OG VÅKNETID'], ['GIVE THE PLACE A NAME', 'GI STEDET ET NAVN'], ['GOAL SET', 'MÅL SATT'],
   ['GOOGLE CALENDAR CONNECTED', 'GOOGLE KALENDER TILKOBLET'], ['GOOGLE CALENDAR ONLY WORKS FROM THE WEB ADDRESS (GITHUB PAGES)', 'GOOGLE KALENDER FUNGERER BARE FRA NETTADRESSEN (GITHUB PAGES)'],
@@ -2202,6 +2336,30 @@ const I18N = [
   ['TASK UPDATED', 'OPPGAVE OPPDATERT'], ['THAT DOES NOT LOOK LIKE A GOOGLE CLIENT ID', 'DET SER IKKE UT SOM EN GOOGLE CLIENT ID'],
   ['SEARCHING...', 'SØKER...'], ['NO MATCHES', 'INGEN TREFF'], ['SEARCH FAILED — CHECK CONNECTION', 'SØK FEILET — SJEKK NETTVERKET'],
   ['Saved places', 'Lagrede steder'],
+  // Important dates & calendar views
+  ['Courses', 'Fag'], ['// Important Dates', '// Viktige datoer'], ['NO IMPORTANT DATES COMING UP', 'INGEN VIKTIGE DATOER FREMOVER'], ['NO IMPORTANT DATES', 'INGEN VIKTIGE DATOER'],
+  ['1 day', '1 dag'], ['3 days', '3 dager'], ['7 days', '7 dager'], ['⚑ Important dates', '⚑ Viktige datoer'], ['Important date', 'Viktig dato'],
+  ['Add important date', 'Ny viktig dato'], ['Edit important date', 'Rediger viktig dato'], ['E.g. exam, test, hand-in', 'F.eks. eksamen, prøve, innlevering'],
+  ['Date not known yet', 'Datoen er ikke kjent ennå'], ['Assumed date (the earliest it could be)', 'Antatt dato (den tidligste den kan bli)'],
+  ['Pick the earliest date it can realistically be. Countdowns use this date, so an unknown date never feels further away than it is.', 'Velg den tidligste datoen det realistisk kan bli. Nedtellingen bruker denne datoen, så en ukjent dato aldri føles lenger unna enn den er.'],
+  ['assumed', 'antatt'], ['at the earliest', 'tidligst'], ['assumed date passed – check', 'antatt dato passert – sjekk'],
+  ['Delete this important date? Linked tasks are kept.', 'Slette denne viktige datoen? Koblede oppgaver beholdes.'], ['Lesson', 'Økt'], ['homework', 'lekser'],
+  // Courses
+  ['In class', 'I timen'], ['Homework', 'Lekser'], ['Lectures', 'Forelesninger'], ['hours', 'timer'], ['Behind', 'Etterslep'],
+  ['in-class + homework from past lessons', 'i timen + lekser fra økter som har vært'], ['Next lesson', 'Neste økt'], ['From this week', 'Fra denne uka'],
+  ['All weeks', 'Alle uker'], ['Week', 'Uke'], ['NOTHING BEHIND. GOOD WORK!', 'INGEN ETTERSLEP. BRA JOBBA!'], ['NO WEEKS TO SHOW', 'INGEN UKER Å VISE'],
+  ['NO PROGRESS PLAN YET. PASTE IT AS JSON UNDER COURSE SETTINGS BELOW.', 'INGEN FREMDRIFTSPLAN ENNÅ. LIM DEN INN SOM JSON UNDER INNSTILLINGER FOR FAGET NEDENFOR.'],
+  ['No lectures registered yet. Paste the list (JSON) under course settings below.', 'Ingen forelesninger registrert ennå. Lim inn lista (JSON) under innstillinger for faget nedenfor.'],
+  ['watched', 'sett'], ['Course settings & import', 'Innstillinger og import for faget'], ['Short name', 'Kortnavn'], ['Subject code', 'Fagkode'],
+  ['Exam (important date)', 'Eksamen (viktig dato)'], ['Lessons start', 'Øktene starter'], ['Lessons end', 'Øktene slutter'],
+  ['Word in Google Calendar titles (avoids duplicates)', 'Ord i titler i Google Kalender (unngår duplikater)'],
+  ['Paste JSON (progress plan and/or lectures)', 'Lim inn JSON (fremdriftsplan og/eller forelesninger)'], ['Import', 'Importer'], ['Export course', 'Eksporter fag'],
+  ['Delete course', 'Slett fag'], ['Mark all', 'Merk alle'], ['all', 'alle'], ['Programming task', 'Programmeringsoppgave'], ['New course', 'Nytt fag'],
+  ['Name of the course:', 'Navn på faget:'], ['Delete this course with its plan and progress?', 'Slette faget med plan og fremdrift?'],
+  ['NO COURSES YET. IMPORT YOUR PROGRESS PLAN UNDER LOG → DATA, OR ADD A COURSE.', 'INGEN FAG ENNÅ. IMPORTER FREMDRIFTSPLANEN UNDER LOGG → DATA, ELLER LEGG TIL ET FAG.'],
+  ['Exam', 'Eksamen'], ['THAT IS NOT VALID JSON', 'DETTE ER IKKE GYLDIG JSON'], ['FOUND NO WEEKS OR LECTURES IN THE JSON', 'FANT INGEN UKER ELLER FORELESNINGER I JSON-EN'],
+  ['COURSE UPDATED', 'FAG OPPDATERT'], ['Mark earlier weeks as done', 'Merk tidligere uker som gjort'],
+  ['Mark all in-class tasks and homework from lessons before this week as done? You can untick what you are missing afterwards.', 'Merke alle oppgaver i timen og lekser fra økter før denne uka som gjort? Du kan krysse av igjen det du mangler etterpå.'],
 ];
 const I18N_TO_NO = new Map(), I18N_TO_EN = new Map();
 I18N.forEach(([en, no]) => { if (!I18N_TO_NO.has(en)) I18N_TO_NO.set(en, no); if (!I18N_TO_EN.has(no)) I18N_TO_EN.set(no, en); });
@@ -2263,33 +2421,110 @@ function fmtDay(dateStr, opts) { return new Date(dateStr + 'T12:00:00Z').toLocal
 function osloParts(isoDateTime) { const s = new Date(isoDateTime).toLocaleString('sv-SE', { timeZone: 'Europe/Oslo' }); return { date: s.slice(0, 10), time: s.slice(11, 16) }; }
 
 // ==================== CALENDAR ====================
-let calView = lsGet('pipboy_calview') === 'agenda' ? 'agenda' : 'month';
+const CAL_VIEWS = ['d1', 'd3', 'd7', 'month', 'agenda'];
+let calView = (v => CAL_VIEWS.includes(v) ? v : 'd3')(lsGet('pipboy_calview'));   // 3 days is the default
 let calMonth = todayStr().slice(0, 7);   // 'YYYY-MM'
 let calSel = todayStr();
+let calAnchor = todayStr();              // first day shown in the 1/3/7-day views
 
-function setCalView(v) { calView = v; lsSet('pipboy_calview', v); renderCalendar(); }
-function calMove(n) {
-  if (calView === 'month') { const d = new Date(calMonth + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); calMonth = d.toISOString().slice(0, 7); }
-  else { calSel = addDays(calSel, n * 14); calMonth = calSel.slice(0, 7); }
+function nDays() { return { d1: 1, d3: 3, d7: 7 }[calView] || 0; }
+function weekStart(d) { return addDays(d, -weekdayIdx(d)); }
+function anchorFor(d) { return calView === 'd7' ? weekStart(d) : d; }
+
+function setCalView(v) {
+  calView = v; lsSet('pipboy_calview', v);
+  calAnchor = anchorFor(calSel); calMonth = calSel.slice(0, 7);
   renderCalendar();
 }
-function calToday() { calSel = todayStr(); calMonth = calSel.slice(0, 7); renderCalendar(); }
-function calPick(d) { calSel = d; if (d.slice(0, 7) !== calMonth && calView === 'month') calMonth = d.slice(0, 7); renderCalendar(); }
+function calMove(n) {
+  if (calView === 'month') { const d = new Date(calMonth + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); calMonth = d.toISOString().slice(0, 7); }
+  else if (nDays()) { calAnchor = addDays(calAnchor, n * nDays()); calSel = calAnchor; calMonth = calSel.slice(0, 7); }
+  else { calSel = addDays(calSel, n * 14); calAnchor = calSel; calMonth = calSel.slice(0, 7); }
+  renderCalendar();
+}
+function calToday() { calSel = todayStr(); calMonth = calSel.slice(0, 7); calAnchor = anchorFor(calSel); renderCalendar(); }
+function calPick(d) {
+  calSel = d;
+  if (calView === 'month' && d.slice(0, 7) !== calMonth) calMonth = d.slice(0, 7);
+  if (nDays() && (d < calAnchor || d > addDays(calAnchor, nDays() - 1))) calAnchor = anchorFor(d);
+  renderCalendar();
+}
 
 function calRange() {
-  if (calView === 'month') { const first = calMonth + '-01'; const start = addDays(first, -weekdayIdx(first)); return { from: start, to: addDays(start, 41) }; }
+  if (calView === 'month') { const first = calMonth + '-01'; const start = weekStart(first); return { from: start, to: addDays(start, 41) }; }
+  if (nDays()) return { from: calAnchor, to: addDays(calAnchor, nDays() - 1) };
   return { from: calSel, to: addDays(calSel, 29) };
 }
 
-// Everything that has a date: deadlines, tasks and (when connected) Google events
+// Everything that has a date: important dates, tasks, course lessons and (when connected) Google events
 function calItems(from, to) {
   const out = [];
   const inR = d => d && d >= from && d <= to;
-  S.deadlines.forEach(d => { if (inR(d.date)) out.push({ kind: 'dl', id: d.id, date: d.date, time: d.time || '', title: d.title, pri: d.priority, gcalId: d.gcalId }); });
+  S.deadlines.forEach(d => { const ed = effDate(d); if (inR(ed)) out.push({ kind: 'dl', id: d.id, date: ed, time: d.time || '', title: (isEst(d) ? '~ ' : '') + d.title, pri: d.priority, est: isEst(d), gcalId: d.gcalId }); });
   S.tasks.forEach(t => { if (inR(t.date) && t.status !== 'discarded') out.push({ kind: 'task', id: t.id, date: t.date, time: t.time || '', title: t.text, status: t.status, gcalId: t.gcalId }); });
   const linked = new Set([...S.deadlines, ...S.tasks].map(x => x.gcalId).filter(Boolean));
-  gcalEvents.forEach(ev => { if (!linked.has(ev.id)) ev.days.forEach(d => { if (inR(d)) out.push({ kind: 'g', id: ev.id, date: d, time: ev.allDay ? '' : ev.time, title: ev.title, link: ev.link }); }); });
+  const gItems = [];
+  gcalEvents.forEach(ev => { if (!linked.has(ev.id)) ev.days.forEach(d => { if (inR(d)) gItems.push({ kind: 'g', id: ev.id, date: d, time: ev.allDay || ev.multi ? '' : ev.time, end: ev.end || '', title: ev.title, link: ev.link }); }); });
+  // Course lessons: hidden in the time grid when the same lesson already comes from Google
+  courseLessonsInRange(from, to).forEach(it => {
+    const s0 = it.time ? t2m(it.time) : -1, e0 = it.end ? t2m(it.end) : s0 + 60;
+    it.hideInGrid = !!it.calMatch && gItems.some(g => g.date === it.date && g.time && t2m(g.time) < e0 && (g.end ? t2m(g.end) : t2m(g.time) + 60) > s0 && g.title.toLowerCase().includes(it.calMatch.toLowerCase()));
+    out.push(it);
+  });
+  out.push(...gItems);
   return out.sort((a, b) => (a.date + (a.time || '00:00')).localeCompare(b.date + (b.time || '00:00')));
+}
+
+// Minutes since midnight in Oslo, right now
+function osloNowMin() { const t = new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hour12: false }); return t2m(t); }
+
+function itemEndMin(it) {
+  const s = t2m(it.time);
+  if (it.end) { const e = t2m(it.end); if (e > s) return e; }
+  return s + ({ task: 60, dl: 30, les: 90, g: 60 }[it.kind] || 60);
+}
+
+// Overlapping events share the column width
+function layoutDay(evs) {
+  const out = []; let cluster = [], clusterEnd = -1;
+  const flush = () => {
+    const cols = [];
+    cluster.forEach(e => { let c = cols.findIndex(end => end <= e.s); if (c < 0) { c = cols.length; cols.push(0); } cols[c] = e.e; e.col = c; });
+    cluster.forEach(e => { e.ncol = cols.length; }); out.push(...cluster); cluster = [];
+  };
+  evs.forEach(e => { if (cluster.length && e.s >= clusterEnd) { flush(); clusterEnd = -1; } cluster.push(e); clusterEnd = Math.max(clusterEnd, e.e); });
+  if (cluster.length) flush();
+  return out;
+}
+
+function renderTimeGrid(from, n, items, today) {
+  const days = [...Array(n)].map((_, i) => addDays(from, i));
+  const timed = items.filter(it => it.time && !it.hideInGrid);
+  const allday = items.filter(it => !it.time && !it.hideInGrid);
+  let minH = 7, maxH = 22;
+  timed.forEach(it => { minH = Math.min(minH, Math.floor(t2m(it.time) / 60)); maxH = Math.max(maxH, Math.ceil(itemEndMin(it) / 60)); });
+  minH = Math.max(0, minH); maxH = Math.min(24, maxH);
+  const hp = window.innerWidth <= 700 ? 36 : 42, H = (maxH - minH) * hp;
+  const cls = it => `k-${it.kind} ${it.kind === 'dl' && it.pri === 'urgent' ? 'pri-urgent-b' : ''} ${it.est ? 'est' : ''} ${it.status === 'finished' ? 'done' : ''}`;
+  const click = it => it.kind === 'les' ? `openCourseLesson('${it.courseId}','${it.id}')` : `calPick('${it.date}')`;
+
+  let html = '<div class="tg-gutter"></div>' + days.map(d =>
+    `<div class="tg-dayhead ${d === today ? 'today' : ''} ${d === calSel ? 'sel' : ''}" onclick="calPick('${d}')">${fmtDay(d, { weekday: 'short' })}<b>${+d.slice(8)}.${n < 7 ? ' ' + fmtDay(d, { month: 'short' }) : ''}</b></div>`).join('');
+  html += `<div class="tg-gutter" style="padding-top:4px">${tr('all day')}</div>` + days.map(d =>
+    `<div class="tg-allday">${allday.filter(it => it.date === d).map(it => `<div class="tg-chip ${cls(it)}" data-noi18n title="${escAttr(it.title)}" onclick="${click(it)}">${escHtml(it.title)}</div>`).join('')}</div>`).join('');
+  let hours = ''; for (let h = minH + 1; h < maxH; h++) hours += `<span class="tg-hour" style="top:${(h - minH) * hp}px">${String(h).padStart(2, '0')}</span>`;
+  html += `<div class="tg-gutter" style="height:${H}px">${hours}</div>`;
+  const nowMin = osloNowMin();
+  days.forEach(d => {
+    const evs = layoutDay(timed.filter(it => it.date === d).map(it => ({ it, s: t2m(it.time), e: itemEndMin(it) })).sort((a, b) => a.s - b.s || b.e - a.e));
+    const blocks = evs.map(({ it, s, e, col, ncol }) => {
+      const top = (s - minH * 60) / 60 * hp, h = Math.max(15, (e - s) / 60 * hp - 1);
+      return `<div class="tg-ev ${cls(it)}" data-noi18n style="top:${top}px;height:${h}px;left:calc(${col / ncol * 100}% + 1px);width:calc(${100 / ncol}% - 2px)" title="${escAttr(it.time + (it.end ? '–' + it.end : '') + ' ' + it.title)}" onclick="${click(it)}"><span class="t">${it.time}</span> ${escHtml(it.title)}</div>`;
+    }).join('');
+    const now = d === today && nowMin >= minH * 60 && nowMin <= maxH * 60 ? `<div class="tg-now" style="top:${(nowMin - minH * 60) / 60 * hp}px"></div>` : '';
+    html += `<div class="tg-col ${d === today ? 'today' : ''}" style="height:${H}px">${blocks}${now}</div>`;
+  });
+  return `<div class="tg" style="--cols:${n};--hour:${hp}px">${html}</div>`;
 }
 
 function renderCalendar() {
@@ -2310,12 +2545,17 @@ function renderCalendar() {
       const cls = ['cal-cell', d.slice(0, 7) !== calMonth ? 'other' : '', d === today ? 'today' : '', d === calSel ? 'sel' : ''].join(' ');
       cells += `<div class="${cls}" onclick="calPick('${d}')">
         <div class="cal-num">${+d.slice(8)}</div>
-        ${its.slice(0, 3).map(it => `<div class="cal-item k-${it.kind} ${it.kind === 'dl' && it.pri === 'urgent' ? 'pri-urgent-b' : ''}" data-noi18n title="${escHtml(it.title)}">${it.time ? it.time + ' ' : ''}${escHtml(it.title)}</div>`).join('')}
+        ${its.slice(0, 3).map(it => `<div class="cal-item k-${it.kind} ${it.kind === 'dl' && it.pri === 'urgent' ? 'pri-urgent-b' : ''} ${it.est ? 'est' : ''}" data-noi18n title="${escHtml(it.title)}">${it.time ? it.time + ' ' : ''}${escHtml(it.title)}</div>`).join('')}
         ${its.length > 3 ? `<div class="cal-more">+${its.length - 3}</div>` : ''}
         <div class="cal-dots">${its.slice(0, 6).map(it => `<span class="cal-dot k-${it.kind}"></span>`).join('')}</div>
       </div>`;
     }
     body.innerHTML = `<div class="cal-grid">${dows}${cells}</div>`;
+  } else if (nDays()) {
+    document.getElementById('calTitle').textContent = nDays() === 1
+      ? fmtDay(from, { weekday: 'long', day: 'numeric', month: 'long' })
+      : fmtDay(from, { day: 'numeric', month: 'short' }) + ' – ' + fmtDay(to, { day: 'numeric', month: 'short', year: 'numeric' });
+    body.innerHTML = renderTimeGrid(from, nDays(), items, today);
   } else {
     document.getElementById('calTitle').textContent = fmtDay(from, { day: 'numeric', month: 'short' }) + ' – ' + fmtDay(to, { day: 'numeric', month: 'short', year: 'numeric' });
     const days = Object.keys(byDate).sort();
@@ -2338,15 +2578,16 @@ function renderCalendar() {
 }
 
 function calItemHtml(it) {
-  const kindLabel = { dl: tr('Deadline'), task: tr('Task'), g: 'Google' }[it.kind];
+  const kindLabel = { dl: tr('Important date') + (it.est ? ' · ' + tr('assumed') : ''), task: tr('Task'), g: 'Google', les: tr('Lesson') + (it.hwTotal ? ' · ' + tr('homework') + ' ' + it.hwDone + '/' + it.hwTotal : '') }[it.kind];
   let actions = '';
   if (it.kind === 'task') actions = `<button class="act-btn" onclick="editTask('${it.id}')">[e]</button>`;
   if (it.kind === 'dl') actions = `<button class="act-btn" onclick="editDeadline('${it.id}')">[e]</button>`;
-  if (it.kind !== 'g' && gcalConnected()) actions += `<button class="act-btn" onclick="gcalPush('${it.kind}','${it.id}')" title="${tr('Send to Google Calendar')}">${it.gcalId ? '&#8635;' : '&rarr;'} G</button>`;
+  if (it.kind === 'les') actions = `<button class="act-btn" onclick="openCourseLesson('${it.courseId}','${it.id}')">${tr('open')}</button>`;
+  if ((it.kind === 'task' || (it.kind === 'dl' && !it.est)) && gcalConnected()) actions += `<button class="act-btn" onclick="gcalPush('${it.kind}','${it.id}')" title="${tr('Send to Google Calendar')}">${it.gcalId ? '&#8635;' : '&rarr;'} G</button>`;
   if (it.kind === 'g' && it.link && /^https:\/\/(www|calendar)\.google\.com\//.test(it.link)) actions = `<a class="act-btn" href="${escHtml(it.link)}" target="_blank" rel="noopener">${tr('open')}</a>`;
   const pri = it.kind === 'dl' ? 'pri-' + it.pri : '';
   return `<div class="cal-day-item">
-    <div class="when">${it.time || tr('all day')}</div>
+    <div class="when">${it.time ? it.time + (it.end ? '<br>' + it.end : '') : tr('all day')}</div>
     <div class="what"><div class="${pri}" data-noi18n>${escHtml(it.title)}</div><div class="kind">${kindLabel}${it.kind === 'task' && it.status !== 'active' ? ' · ' + tr(it.status.replace('_', ' ')) : ''}</div></div>
     <div>${actions}</div></div>`;
 }
@@ -2429,9 +2670,10 @@ function ensureGcalRange(from, to) {
       const allDay = !!(ev.start && ev.start.date);
       let start, end, time = '';
       if (allDay) { start = ev.start.date; end = addDays(ev.end.date, -1); }
-      else { const sp = osloParts(ev.start.dateTime), ep = osloParts(ev.end.dateTime); start = sp.date; end = ep.date; time = sp.time; }
+      let endTime = '';
+      if (!allDay) { const sp = osloParts(ev.start.dateTime), ep = osloParts(ev.end.dateTime); start = sp.date; end = ep.date; time = sp.time; endTime = ep.time; if (end > start && endTime === '00:00') { end = addDays(end, -1); endTime = '24:00'; } }
       const days = []; for (let d = start, i = 0; d <= end && i < 14; d = addDays(d, 1), i++) days.push(d);
-      return { id: ev.id, title: ev.summary || '(no title)', allDay, time, days, link: ev.htmlLink };
+      return { id: ev.id, title: ev.summary || '(no title)', allDay, multi: !allDay && days.length > 1, time, end: endTime, days, link: ev.htmlLink };
     });
     gcalError = '';
     renderCalendar();
@@ -2509,7 +2751,7 @@ async function syncFetchRemote(id) {
   return JSON.parse(content);
 }
 
-function hasLocalData() { return !!(S.tasks.length || S.deadlines.length || S.sleep.length || S.screen.length || S.places.length); }
+function hasLocalData() { return !!(S.tasks.length || S.deadlines.length || S.sleep.length || S.screen.length || S.places.length || (S.courses||[]).length); }
 
 function applyRemote(remote) {
   _applyingRemote = true;
@@ -2618,6 +2860,296 @@ function initSync() {
     if (document.visibilityState === 'visible') syncPull();
     else if (syncTimer) syncPush(true);   // flush pending change when leaving the app
   });
+}
+
+// ==================== COURSES (progress plans & lectures) ====================
+// A course holds its plan (weeks -> lessons -> items per level) and lecture list as plain data,
+// imported as JSON. Progress is kept apart in course.done / course.watched ({ id: 'YYYY-MM-DD' }),
+// so a plan can be re-imported or corrected without losing what you have ticked off.
+// Item strings like "1.14-1.17" expand to one checkbox per exercise; "*" marks programming tasks.
+const LEVELS = [['class', 'In class'], ['hw', 'Homework'], ['e1', 'E1'], ['e2', 'E2']];
+const LATE_LEVELS = ['class', 'hw'];   // what counts as "behind" (E1/E2 are optional extras)
+let curCourse = lsGet('pipboy_course') || '';
+let courseFilter = 'upcoming';         // all | upcoming | behind
+let courseLevels = (() => { try { const v = JSON.parse(lsGet('pipboy_course_levels') || 'null'); return Array.isArray(v) ? v : ['class', 'hw', 'e1', 'e2']; } catch (e) { return ['class', 'hw', 'e1', 'e2']; } })();
+const weekOpen = new Map();             // weekId -> true/false when toggled by hand
+
+function getCourse(id) { return (S.courses || []).find(c => c.id === id); }
+function allLessons(c) { return (c.weeks || []).flatMap(w => (w.lessons || []).map(l => ({ w, l }))); }
+
+function expandItem(raw) {
+  const s = String(raw).trim();
+  const m = s.match(/^(\d+)\.(\d+)\s*[-–]\s*(\d+)\.(\d+)(\*?)$/);
+  if (m && m[1] === m[3] && +m[4] > +m[2] && +m[4] - +m[2] <= 40) {
+    const out = []; for (let n = +m[2]; n <= +m[4]; n++) out.push(m[1] + '.' + n + m[5]); return out;
+  }
+  return [s];
+}
+
+function lessonItems(l, lvl) {
+  const seen = {};
+  return ((l.items && l.items[lvl]) || []).flatMap(expandItem).filter(Boolean).map(label => {
+    const base = l.id + '|' + lvl + '|' + label;
+    const k = seen[base] = (seen[base] || 0) + 1;
+    return { id: k > 1 ? base + '#' + k : base, label, ex: /^\(?\d+\.\d+/.test(label), prog: label.includes('*') };
+  });
+}
+
+function isDone(c, id) { return !!(c.done && c.done[id]); }
+
+function courseStats(c) {
+  const today = todayStr(), st = {};
+  LEVELS.forEach(([k]) => { st[k] = { done: 0, total: 0, late: 0 }; });
+  allLessons(c).forEach(({ l }) => LEVELS.forEach(([k]) => lessonItems(l, k).forEach(it => {
+    st[k].total++;
+    if (isDone(c, it.id)) st[k].done++;
+    else if (l.date && l.date < today) st[k].late++;
+  })));
+  st.behind = LATE_LEVELS.reduce((n, k) => n + st[k].late, 0);
+  const lec = c.lectures || [];
+  st.lec = { done: lec.filter(x => c.watched && c.watched[x.id]).length, total: lec.length, min: lec.reduce((n, x) => n + (+x.minutes || 0), 0), minDone: lec.filter(x => c.watched && c.watched[x.id]).reduce((n, x) => n + (+x.minutes || 0), 0) };
+  return st;
+}
+
+// Lessons as calendar items
+function courseLessonsInRange(from, to) {
+  const out = [];
+  (S.courses || []).forEach(c => allLessons(c).forEach(({ l }) => {
+    if (!l.date || l.date < from || l.date > to) return;
+    const hw = lessonItems(l, 'hw');
+    out.push({ kind: 'les', id: l.id, courseId: c.id, date: l.date, time: l.start || c.start || '', end: l.end || c.end || '',
+      title: (c.short || c.name) + ': ' + ((l.topics || []).filter(t => !/^Prøvegjennomgang/.test(t))[0] || l.label || ''),
+      calMatch: c.calMatch || '', hwDone: hw.filter(it => isDone(c, it.id)).length, hwTotal: hw.length });
+  }));
+  return out;
+}
+
+// ---- actions ----
+function selectCourse(id) { curCourse = id; lsSet('pipboy_course', id); renderCourses(); }
+function setCourseFilter(f) { courseFilter = f; renderCourses(); }
+function toggleLevel(k) {
+  courseLevels = courseLevels.includes(k) ? courseLevels.filter(x => x !== k) : [...courseLevels, k];
+  lsSet('pipboy_course_levels', JSON.stringify(courseLevels)); renderCourses();
+}
+function toggleWeek(id, open) { weekOpen.set(id, !open); renderCourses(); }
+
+function toggleItem(id) {
+  const c = getCourse(curCourse); if (!c) return;
+  c.done = c.done || {};
+  if (c.done[id]) delete c.done[id]; else c.done[id] = todayStr();
+  save(); renderCourses(); renderCalendar();
+}
+function toggleLessonLevel(lessonId, lvl) {
+  const c = getCourse(curCourse); if (!c) return;
+  const hit = allLessons(c).find(x => x.l.id === lessonId); if (!hit) return;
+  const items = lessonItems(hit.l, lvl);
+  c.done = c.done || {};
+  const all = items.every(it => c.done[it.id]);
+  items.forEach(it => { if (all) delete c.done[it.id]; else if (!c.done[it.id]) c.done[it.id] = todayStr(); });
+  save(); renderCourses(); renderCalendar();
+}
+function toggleLecture(id) {
+  const c = getCourse(curCourse); if (!c) return;
+  c.watched = c.watched || {};
+  if (c.watched[id]) delete c.watched[id]; else c.watched[id] = todayStr();
+  save(); renderCourses();
+}
+
+// Catch up quickly: tick off in-class + homework for every lesson before this week, then untick what is really missing
+function markPastDone() {
+  const c = getCourse(curCourse); if (!c) return;
+  const ws = weekStart(todayStr());
+  if (!confirm(tr('Mark all in-class tasks and homework from lessons before this week as done? You can untick what you are missing afterwards.'))) return;
+  c.done = c.done || {};
+  allLessons(c).forEach(({ l }) => { if (l.date && l.date < ws) LATE_LEVELS.forEach(k => lessonItems(l, k).forEach(it => { if (!c.done[it.id]) c.done[it.id] = l.date; })); });
+  save(); renderCourses(); renderCalendar();
+}
+
+function openCourseLesson(cid, lid) {
+  const c = getCourse(cid); if (!c) return;
+  curCourse = cid; lsSet('pipboy_course', cid);
+  const hit = allLessons(c).find(x => x.l.id === lid);
+  if (hit) weekOpen.set(hit.w.id, true);
+  courseFilter = 'all';
+  switchSection('courses');
+  const el = document.getElementById('les-' + lid);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function addCourse() {
+  const name = (prompt(tr('Name of the course:')) || '').trim(); if (!name) return;
+  const c = { id: uid(), name, short: name, code: '', examId: '', start: '', end: '', calMatch: '', weeks: [], lectures: [], done: {}, watched: {} };
+  S.courses = [...(S.courses || []), c]; curCourse = c.id; lsSet('pipboy_course', c.id);
+  save(); render();
+}
+
+function deleteCourse() {
+  const c = getCourse(curCourse); if (!c) return;
+  if (!confirm(tr('Delete this course with its plan and progress?') + ' (' + c.name + ')')) return;
+  S.courses = S.courses.filter(x => x.id !== c.id); curCourse = '';
+  save(); render();
+}
+
+function saveCourseSettings() {
+  const c = getCourse(curCourse); if (!c) return;
+  const v = id => document.getElementById(id).value.trim();
+  Object.assign(c, { name: v('crsName') || c.name, short: v('crsShort') || v('crsName') || c.short, code: v('crsCode'), examId: v('crsExam'),
+    start: v('crsStart'), end: v('crsEnd'), calMatch: v('crsMatch'), placeId: v('crsPlace') });
+  save(); render(); toast('SAVED');
+}
+
+// Paste JSON: { weeks: [...] } and/or { lectures: [...] } (a whole course object also works)
+function importCourseJson() {
+  const c = getCourse(curCourse); if (!c) return;
+  const box = document.getElementById('crsImport');
+  let d;
+  try { d = JSON.parse(box.value); } catch (e) { toast('THAT IS NOT VALID JSON'); return; }
+  if (Array.isArray(d)) d = { lectures: d };
+  let n = 0;
+  if (Array.isArray(d.weeks)) { c.weeks = d.weeks; n++; }
+  if (Array.isArray(d.lectures)) {
+    const norm = d.lectures.filter(x => x && (x.title || x.url)).map((x, i) => ({
+      id: String(x.id || x.url || (x.chapter || '') + '|' + x.title || i),
+      title: String(x.title || x.url), platform: String(x.platform || ''), url: String(x.url || ''),
+      chapter: String(x.chapter || ''), minutes: +x.minutes || 0, order: +x.order || i,
+    }));
+    c.lectures = mergeBy(c.lectures || [], norm, 'id'); n++;
+  }
+  ['name', 'short', 'code', 'examId', 'start', 'end', 'calMatch', 'placeId'].forEach(k => { if (typeof d[k] === 'string' && d[k]) c[k] = d[k]; });
+  if (!n) { toast('FOUND NO WEEKS OR LECTURES IN THE JSON'); return; }
+  box.value = '';
+  save(); render(); toast('COURSE UPDATED');
+}
+
+function exportCourse() {
+  const c = getCourse(curCourse); if (!c) return;
+  const blob = new Blob([JSON.stringify({ courses: [c] }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'fag-' + (c.short || c.name).replace(/[^\wæøåÆØÅ-]+/g, '_') + '.json'; a.click();
+}
+
+// ---- rendering ----
+function pct(a, b) { return b ? Math.round(a / b * 100) : 0; }
+function progBox(label, done, total, extra, warn) {
+  return `<div class="prog-box ${warn ? 'warn' : ''}"><div class="prog-label">${label}</div>
+    <div class="prog-num">${done}/${total}${total ? ' · ' + pct(done, total) + '%' : ''}</div>
+    <div class="prog-bar"><div style="width:${pct(done, total)}%"></div></div>${extra ? `<div class="lec-meta" style="margin-top:4px">${extra}</div>` : ''}</div>`;
+}
+
+function renderCourses() {
+  const tabs = document.getElementById('courseTabs'); if (!tabs) return;
+  const cs = S.courses || [];
+  if (!getCourse(curCourse)) curCourse = cs[0] ? cs[0].id : '';
+  tabs.innerHTML = cs.map(c => `<button class="range-btn ${c.id === curCourse ? 'active' : ''}" onclick="selectCourse('${escAttr(c.id)}')" data-noi18n>${escHtml(c.short || c.name)}</button>`).join('')
+    + `<button class="range-btn" onclick="addCourse()">+ ${tr('New course')}</button>`;
+  const view = document.getElementById('courseView');
+  const c = getCourse(curCourse);
+  if (!c) { view.innerHTML = `<div class="empty-state">${tr('NO COURSES YET. IMPORT YOUR PROGRESS PLAN UNDER LOG → DATA, OR ADD A COURSE.')}</div>`; return; }
+
+  const today = todayStr(), st = courseStats(c);
+  const exam = c.examId ? getDeadline(c.examId) : null;
+  const examTxt = exam ? `${tr('Exam')}: ${dlDateLabel(exam)}${effDate(exam) ? ' · ' + (isEst(exam) ? '&le; ' : '') + Math.max(0, daysUntil(effDate(exam))) + ' ' + tr('days') : ''}` : '';
+  const next = allLessons(c).map(x => x.l).filter(l => l.date && l.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
+
+  let html = `<div class="course-head"><h2 data-noi18n>${escHtml(c.name)}${c.code ? ' <span class="lec-meta">' + escHtml(c.code) + '</span>' : ''}</h2><div class="course-exam">${examTxt}</div></div>`;
+
+  // Progress overview
+  html += '<div class="prog-grid">' +
+    LEVELS.filter(([k]) => st[k].total).map(([k, name]) => progBox(tr(name), st[k].done, st[k].total)).join('') +
+    (st.lec.total ? progBox(tr('Lectures'), st.lec.done, st.lec.total, st.lec.min ? Math.round(st.lec.minDone / 60 * 10) / 10 + ' / ' + Math.round(st.lec.min / 60 * 10) / 10 + ' ' + tr('hours') : '') : '') +
+    (allLessons(c).length ? `<div class="prog-box ${st.behind ? 'warn' : ''}"><div class="prog-label">${tr('Behind')}</div><div class="prog-num">${st.behind}</div><div class="lec-meta">${tr('in-class + homework from past lessons')}</div></div>` : '') +
+    (next ? `<div class="prog-box"><div class="prog-label">${tr('Next lesson')}</div><div class="prog-num" style="font-size:13px">${fmtDay(next.date, { weekday: 'short', day: 'numeric', month: 'short' })} ${next.start || c.start || ''}</div><div class="lec-meta" data-noi18n>${escHtml((next.topics || []).join(' · '))}</div></div>` : '') +
+    '</div>';
+
+  // Plan
+  if (allLessons(c).length || (c.weeks || []).length) {
+    const fchip = (k, label) => `<button class="range-btn ${courseFilter === k ? 'active' : ''}" onclick="setCourseFilter('${k}')">${tr(label)}</button>`;
+    html += `<div class="course-filters">${fchip('upcoming', 'From this week')}${fchip('behind', 'Behind')}${fchip('all', 'All weeks')}
+      <span class="sep" style="width:8px"></span>
+      ${LEVELS.map(([k, name]) => `<button class="range-btn ${courseLevels.includes(k) ? 'active' : ''}" onclick="toggleLevel('${k}')">${tr(name)}</button>`).join('')}</div>`;
+
+    let shown = 0;
+    (c.weeks || []).forEach(w => {
+      const current = w.from <= today && today <= w.to;
+      if (courseFilter === 'upcoming' && w.to < today) return;
+      const lessons = (w.lessons || []).filter(l => courseFilter !== 'behind' ||
+        (l.date && l.date < today && LATE_LEVELS.some(k => lessonItems(l, k).some(it => !isDone(c, it.id)))));
+      if (courseFilter === 'behind' && !lessons.length) return;
+      shown++;
+      let wd = 0, wt = 0;
+      (w.lessons || []).forEach(l => courseLevels.forEach(k => lessonItems(l, k).forEach(it => { wt++; if (isDone(c, it.id)) wd++; })));
+      const auto = current || courseFilter === 'behind' || (w.from > today && w.from <= addDays(today, 7));
+      const open = weekOpen.has(w.id) ? weekOpen.get(w.id) : auto;
+      html += `<div class="wk ${current ? 'current' : ''}">
+        <div class="wk-head" onclick="toggleWeek('${escAttr(w.id)}', ${open})"><span>${open ? '&#9662;' : '&#9656;'}</span>
+          <span class="grow">${tr('Week')} ${w.week || ''} <span class="mini">${w.from ? fmtDay(w.from, { day: 'numeric', month: 'short' }) + ' – ' + fmtDay(w.to, { day: 'numeric', month: 'short' }) : ''}</span></span>
+          <span class="mini">${wt ? wd + '/' + wt : ''}</span></div>
+        ${w.note ? `<div class="wk-note" data-noi18n>${escHtml(w.note)}</div>` : ''}
+        ${open ? lessons.map(l => lessonHtml(c, l, today)).join('') : ''}
+      </div>`;
+    });
+    if (!shown) html += `<div class="empty-state">${tr(courseFilter === 'behind' ? 'NOTHING BEHIND. GOOD WORK!' : 'NO WEEKS TO SHOW')}</div>`;
+  } else {
+    html += `<div class="empty-state">${tr('NO PROGRESS PLAN YET. PASTE IT AS JSON UNDER COURSE SETTINGS BELOW.')}</div>`;
+  }
+
+  // Lectures
+  const lec = [...(c.lectures || [])].sort((a, b) => (a.chapter || '').localeCompare(b.chapter || '', 'nb', { numeric: true }) || (a.order || 0) - (b.order || 0));
+  html += `<div class="panel-title" style="margin-top:16px">// ${tr('Lectures')} ${lec.length ? '(' + st.lec.done + '/' + lec.length + ')' : ''}</div>`;
+  if (!lec.length) html += `<div class="field-help">${tr('No lectures registered yet. Paste the list (JSON) under course settings below.')}</div>`;
+  let lastCh = null;
+  lec.forEach(x => {
+    if (x.chapter !== lastCh) { lastCh = x.chapter; if (x.chapter) html += `<div class="cal-agenda-day" data-noi18n>${escHtml(x.chapter)}</div>`; }
+    const w = c.watched && c.watched[x.id];
+    const safeUrl = /^https:\/\//.test(x.url || '') ? x.url : '';
+    html += `<div class="lec-row ${w ? 'done' : ''}">
+      <input type="checkbox" ${w ? 'checked' : ''} onchange="toggleLecture(this.dataset.id)" data-id="${escAttr(x.id)}">
+      <div class="grow"><span data-noi18n>${escHtml(x.title)}</span><div class="lec-meta">${escHtml(x.platform || '')}${x.minutes ? ' · ' + x.minutes + ' min' : ''}${w ? ' · ' + tr('watched') + ' ' + shortD(w) : ''}</div></div>
+      ${safeUrl ? `<a class="act-btn" href="${escAttr(safeUrl)}" target="_blank" rel="noopener">${tr('open')}</a>` : ''}
+    </div>`;
+  });
+
+  // Settings / import
+  const dlOpts = '<option value="">—</option>' + [...S.deadlines].sort(byDl).map(d => `<option data-noi18n value="${escAttr(d.id)}" ${d.id === c.examId ? 'selected' : ''}>${escHtml(d.title)}</option>`).join('');
+  const plOpts = '<option value="">—</option>' + S.places.map(p => `<option data-noi18n value="${escAttr(p.id)}" ${p.id === c.placeId ? 'selected' : ''}>${escHtml(p.name)}</option>`).join('');
+  html += `<details class="course-admin"><summary>${tr('Course settings & import')}</summary>
+    <div class="input-row">
+      <div class="input-group"><label>Name</label><input class="pip-input" id="crsName" value="${escAttr(c.name || '')}"></div>
+      <div class="input-group"><label>Short name</label><input class="pip-input" id="crsShort" value="${escAttr(c.short || '')}"></div>
+      <div class="input-group"><label>Subject code</label><input class="pip-input" id="crsCode" value="${escAttr(c.code || '')}"></div>
+      <div class="input-group"><label>Exam (important date)</label><select class="pip-input" id="crsExam">${dlOpts}</select></div>
+      <div class="input-group"><label>Lessons start</label><input type="time" class="pip-input" id="crsStart" value="${escAttr(c.start || '')}"></div>
+      <div class="input-group"><label>Lessons end</label><input type="time" class="pip-input" id="crsEnd" value="${escAttr(c.end || '')}"></div>
+      <div class="input-group"><label>Word in Google Calendar titles (avoids duplicates)</label><input class="pip-input" id="crsMatch" value="${escAttr(c.calMatch || '')}"></div>
+      <div class="input-group"><label>Place</label><select class="pip-input" id="crsPlace">${plOpts}</select></div>
+      <div class="form-actions"><button class="pip-btn sm" onclick="saveCourseSettings()">Save</button></div>
+      <div class="input-group"><label>Paste JSON (progress plan and/or lectures)</label><textarea class="pip-input" id="crsImport" rows="5" placeholder='{"weeks": [...]} or {"lectures": [...]}'></textarea></div>
+      <div class="form-actions">
+        <button class="pip-btn sm" onclick="importCourseJson()">Import</button>
+        <button class="pip-btn sm" onclick="markPastDone()">Mark earlier weeks as done</button>
+        <button class="pip-btn sm" onclick="exportCourse()">Export course</button>
+        <button class="pip-btn sm danger" onclick="deleteCourse()">Delete course</button>
+      </div>
+    </div></details>`;
+
+  view.innerHTML = html;
+}
+
+function lessonHtml(c, l, today) {
+  const late = l.date && l.date < today;
+  const time = (l.start || c.start) ? ' · ' + (l.start || c.start) + ((l.end || c.end) ? '–' + (l.end || c.end) : '') : '';
+  let h = `<div class="les" id="les-${escAttr(l.id)}">
+    <div class="les-head"><b data-noi18n>${escHtml(l.label || '')}</b><span class="when">${l.date ? fmtDay(l.date, { weekday: 'short', day: 'numeric', month: 'short' }) : ''}${time}${l.date === today ? ' · ' + tr('today') : ''}</span></div>
+    ${(l.topics || []).length ? `<div class="les-topics" data-noi18n>${l.topics.map(escHtml).join(' · ')}</div>` : ''}`;
+  LEVELS.forEach(([k, name]) => {
+    if (!courseLevels.includes(k)) return;
+    const items = lessonItems(l, k); if (!items.length) return;
+    const all = items.every(it => isDone(c, it.id));
+    h += `<div class="lvl"><div class="lvl-name">${tr(name)}<br><button class="act-btn lvl-all" onclick="toggleLessonLevel('${escAttr(l.id)}','${k}')" title="${tr('Mark all')}">${all ? '&#8634;' : '&#10003; ' + tr('all')}</button></div><div class="lvl-items">` +
+      items.map(it => `<button class="ex ${it.ex ? '' : 'txt'} ${it.prog ? 'prog' : ''} ${isDone(c, it.id) ? 'done' : ''} ${late && LATE_LEVELS.includes(k) ? 'late' : ''}" data-noi18n data-item="${escAttr(it.id)}" onclick="toggleItem(this.dataset.item)" title="${it.prog ? tr('Programming task') : ''}">${escHtml(it.label)}</button>`).join('') +
+      '</div></div>';
+  });
+  return h + '</div>';
 }
 
 // ==================== GOAL OF THE DAY ====================
@@ -2739,6 +3271,7 @@ function render() {
   renderLog();
   renderDeadlineChips();
   renderCalendar();
+  renderCourses();
   renderConnStatus();
 }
 
@@ -2803,7 +3336,7 @@ function renderHome() {
       const timeLabel = d.time ? ' @ '+d.time : '';
       return `<div class="deadline-card ${d.priority==='urgent'?'urgent-glow':'high-glow'}">
         <div class="dl-info"><div class="dl-title pri-${d.priority}" data-noi18n>${escHtml(d.title)}</div>
-        <div class="dl-meta">${d.date ? d.date : tr('Date not known')}${timeLabel} | ${at} ${tr('active')} / ${tt} ${tr('total tasks')}</div></div>
+        <div class="dl-meta">${dlDateLabel(d)}${timeLabel} | ${at} ${tr('active')} / ${tt} ${tr('total tasks')}</div></div>
         <div class="dl-countdown"><div class="pri-${d.priority}">${cd.main}</div>
         <div class="cd-label">${cd.sub}</div></div></div>`;
     }).join('');
@@ -2840,7 +3373,7 @@ function renderDeadlines() {
     return `<div class="deadline-card ${d.priority==='urgent'?'urgent-glow':d.priority==='high'?'high-glow':''}">
       <div class="dl-info">
         <div class="dl-title pri-${d.priority}" data-noi18n>${escHtml(d.title)}</div>
-        <div class="dl-meta">${d.date ? d.date : tr('Date not known')}${timeLabel} | ${tr('Priority')}: ${tr(d.priority[0].toUpperCase()+d.priority.slice(1))}</div>
+        <div class="dl-meta">${dlDateLabel(d)}${timeLabel} | ${tr('Priority')}: ${tr(d.priority[0].toUpperCase()+d.priority.slice(1))}</div>
         <div style="font-size:10px;color:var(--pip-green-dim);letter-spacing:1px;text-align:left;margin-top:2px;">${tr('Total')}: ${tt} | ${tr('Active')}: ${at}</div>
         ${taskHtml}
       </div>
@@ -3454,6 +3987,7 @@ function renderLog() {
 }
 
 // ==================== UTIL ====================
+function escAttr(s) { return escHtml(String(s)).replace(/"/g, '&quot;'); }
 function escHtml(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
 function toast(msg) {
@@ -3488,6 +4022,7 @@ function importData(event) {
       S.tasks = mergeBy(S.tasks, p.tasks, 'id');
       S.places = mergeBy(S.places, p.places, 'id');
       S.groups = mergeBy(S.groups, p.groups, 'id');
+      S.courses = mergeBy(S.courses, p.courses, 'id');
       if (p.goals) S.goals = { ...S.goals, ...p.goals };
       if (p.places && p.places.some(x=>x.home)) { const h = p.places.find(x=>x.home); S.places.forEach(x => { x.home = x.id === h.id; }); }
       S = normalizeState(S);
