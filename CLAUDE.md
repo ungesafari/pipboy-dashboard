@@ -77,6 +77,8 @@ Three levels via `data-brightness="dark|medium|light"` on `<body>` (both themes)
 ### Google Calendar (two-way)
 - Google Identity Services token flow (`initTokenClient`, scope `calendar.events`), no server. Needs an OAuth Web Client ID (`S.settings.googleClientId`) and an https origin (GitHub Pages); not available on `file://`
 - Reads primary calendar events for the visible range; `gcalPush(kind,id)` creates/updates an event for a task or deadline and stores `gcalId`. Google events linked to a dashboard item are hidden to avoid duplicates
+- Google events can be edited, created and deleted from the calendar (`openGev` / `saveGev` / `deleteGev`, panel `#gevPanel`). Multi-day events: only title/place/description
+- Two-way for linked items: `gcalSig` stores title|date|time as last synced. On every fetch `gcalPullLinked()` pulls Google-side edits into items not changed locally; the **"⇅ Sync Google"** button (`gcalSyncAll`) pushes local edits. Pushing keeps the existing event's duration
 
 ### Saved Places & Travel Planner
 - The place with `home: true` is where every day starts and is always the first option in "Place / Area"

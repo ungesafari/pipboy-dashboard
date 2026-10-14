@@ -1001,6 +1001,26 @@
     </div>
     </div>
 
+    <div class="panel" id="gevPanel" style="display:none">
+      <div class="panel-title">// <span id="gevFormTitle">Google event</span></div>
+      <div class="input-row">
+        <div class="input-group"><label>Title</label><input type="text" class="pip-input" id="gevTitle" maxlength="200"></div>
+        <label class="pip-checkbox"><input type="checkbox" id="gevAllDay" onchange="syncGevAllDay()"> All day</label>
+        <div class="input-group"><label>Date</label><input type="date" class="pip-input" id="gevDate"></div>
+        <div class="input-group gev-time"><label>Start</label><input type="time" class="pip-input" id="gevStart"></div>
+        <div class="input-group gev-time"><label>End</label><input type="time" class="pip-input" id="gevEnd"></div>
+        <div class="field-help" id="gevMultiNote" style="display:none">This event spans several days. Change its dates in Google Calendar; here you can edit title, place and description.</div>
+        <div class="input-group"><label>Place</label><input type="text" class="pip-input" id="gevLocation" maxlength="300"></div>
+        <div class="input-group"><label>Description</label><textarea class="pip-input" id="gevDesc" rows="3" maxlength="8000"></textarea></div>
+        <div class="form-actions">
+          <button class="pip-btn" onclick="saveGev()">Save to Google</button>
+          <button class="pip-btn sm" onclick="closeGev()">Cancel</button>
+          <button class="pip-btn sm danger" id="gevDelBtn" onclick="deleteGev()">Delete in Google</button>
+        </div>
+      </div>
+      <input type="hidden" id="gevId" value="">
+    </div>
+
     <div class="panel">
       <div class="panel-title">// <span id="calDayTitle"></span></div>
       <div id="calDayList"></div>
@@ -2358,7 +2378,13 @@ const I18N = [
   ['Name of the course:', 'Navn på faget:'], ['Delete this course with its plan and progress?', 'Slette faget med plan og fremdrift?'],
   ['NO COURSES YET. IMPORT YOUR PROGRESS PLAN UNDER LOG → DATA, OR ADD A COURSE.', 'INGEN FAG ENNÅ. IMPORTER FREMDRIFTSPLANEN UNDER LOGG → DATA, ELLER LEGG TIL ET FAG.'],
   ['Exam', 'Eksamen'], ['THAT IS NOT VALID JSON', 'DETTE ER IKKE GYLDIG JSON'], ['FOUND NO WEEKS OR LECTURES IN THE JSON', 'FANT INGEN UKER ELLER FORELESNINGER I JSON-EN'],
-  ['COURSE UPDATED', 'FAG OPPDATERT'], ['Mark earlier weeks as done', 'Merk tidligere uker som gjort'],
+  ['COURSE UPDATED', 'FAG OPPDATERT'],
+  ['Google event', 'Google-hendelse'], ['Edit Google event', 'Rediger Google-hendelse'], ['New Google event', 'Ny Google-hendelse'], ['All day', 'Hele dagen'],
+  ['End', 'Slutt'], ['Save to Google', 'Lagre i Google'], ['Delete in Google', 'Slett i Google'], ['⇅ Sync Google', '⇅ Synk Google'],
+  ['This event spans several days. Change its dates in Google Calendar; here you can edit title, place and description.', 'Hendelsen går over flere dager. Endre datoene i Google Kalender; her kan du endre tittel, sted og beskrivelse.'],
+  ['Delete this event in Google Calendar?', 'Slette denne hendelsen i Google Kalender?'], ['SYNCED WITH GOOGLE', 'SYNKET MED GOOGLE'], ['sent', 'sendt'],
+  ['UPDATED FROM GOOGLE CALENDAR', 'OPPDATERT FRA GOOGLE KALENDER'], ['DELETED IN GOOGLE CALENDAR', 'SLETTET I GOOGLE KALENDER'],
+  ['PICK A DATE', 'VELG EN DATO'], ['FILL IN START AND END', 'FYLL INN START OG SLUTT'], ['Mark earlier weeks as done', 'Merk tidligere uker som gjort'],
   ['Mark all in-class tasks and homework from lessons before this week as done? You can untick what you are missing afterwards.', 'Merke alle oppgaver i timen og lekser fra økter før denne uka som gjort? Du kan krysse av igjen det du mangler etterpå.'],
 ];
 const I18N_TO_NO = new Map(), I18N_TO_EN = new Map();
@@ -2506,7 +2532,7 @@ function renderTimeGrid(from, n, items, today) {
   minH = Math.max(0, minH); maxH = Math.min(24, maxH);
   const hp = window.innerWidth <= 700 ? 36 : 42, H = (maxH - minH) * hp;
   const cls = it => `k-${it.kind} ${it.kind === 'dl' && it.pri === 'urgent' ? 'pri-urgent-b' : ''} ${it.est ? 'est' : ''} ${it.status === 'finished' ? 'done' : ''}`;
-  const click = it => it.kind === 'les' ? `openCourseLesson('${it.courseId}','${it.id}')` : `calPick('${it.date}')`;
+  const click = it => it.kind === 'les' ? `openCourseLesson('${it.courseId}','${it.id}')` : it.kind === 'g' ? `openGev('${escAttr(it.id)}')` : `calPick('${it.date}')`;
 
   let html = '<div class="tg-gutter"></div>' + days.map(d =>
     `<div class="tg-dayhead ${d === today ? 'today' : ''} ${d === calSel ? 'sel' : ''}" onclick="calPick('${d}')">${fmtDay(d, { weekday: 'short' })}<b>${+d.slice(8)}.${n < 7 ? ' ' + fmtDay(d, { month: 'short' }) : ''}</b></div>`).join('');
@@ -2567,14 +2593,15 @@ function renderCalendar() {
   document.getElementById('calDayTitle').textContent = fmtDay(calSel, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const dayItems = calItems(calSel, calSel);
   document.getElementById('calDayList').innerHTML = (dayItems.length ? dayItems.map(calItemHtml).join('') : `<div class="empty-state" style="padding:10px">${tr('NOTHING PLANNED')}</div>`) +
-    `<button class="pip-btn sm" style="margin-top:8px" onclick="newTaskOn('${calSel}')">+ ${tr('Task this day')}</button>`;
+    `<button class="pip-btn sm" style="margin-top:8px" onclick="newTaskOn('${calSel}')">+ ${tr('Task this day')}</button>` +
+    (gcalConnected() ? ` <button class="pip-btn sm" style="margin-top:8px" onclick="openGev(null,'${calSel}')">+ ${tr('Google event')}</button>` : '');
 
   // Google connection status
   const st = calStatusText();
   document.getElementById('gcalStatus').innerHTML = st;
   const btn = document.getElementById('gcalBtn');
-  btn.textContent = tr(gcalConnected() ? 'Refresh Google' : (gcalToken ? 'Reconnect Google' : 'Connect Google'));
-  btn.onclick = gcalConnected() ? () => { gcalLoadedRange = ''; renderCalendar(); } : gcalConnect;
+  btn.textContent = tr(gcalConnected() ? '⇅ Sync Google' : (gcalToken ? 'Reconnect Google' : 'Connect Google'));
+  btn.onclick = gcalConnected() ? gcalSyncAll : gcalConnect;
 }
 
 function calItemHtml(it) {
@@ -2584,7 +2611,8 @@ function calItemHtml(it) {
   if (it.kind === 'dl') actions = `<button class="act-btn" onclick="editDeadline('${it.id}')">[e]</button>`;
   if (it.kind === 'les') actions = `<button class="act-btn" onclick="openCourseLesson('${it.courseId}','${it.id}')">${tr('open')}</button>`;
   if ((it.kind === 'task' || (it.kind === 'dl' && !it.est)) && gcalConnected()) actions += `<button class="act-btn" onclick="gcalPush('${it.kind}','${it.id}')" title="${tr('Send to Google Calendar')}">${it.gcalId ? '&#8635;' : '&rarr;'} G</button>`;
-  if (it.kind === 'g' && it.link && /^https:\/\/(www|calendar)\.google\.com\//.test(it.link)) actions = `<a class="act-btn" href="${escHtml(it.link)}" target="_blank" rel="noopener">${tr('open')}</a>`;
+  if (it.kind === 'g') actions = `<button class="act-btn" onclick="openGev(this.dataset.id)" data-id="${escAttr(it.id)}">[e]</button>` +
+    (it.link && /^https:\/\/(www|calendar)\.google\.com\//.test(it.link) ? `<a class="act-btn" href="${escAttr(it.link)}" target="_blank" rel="noopener">${tr('open')}</a>` : '');
   const pri = it.kind === 'dl' ? 'pri-' + it.pri : '';
   return `<div class="cal-day-item">
     <div class="when">${it.time ? it.time + (it.end ? '<br>' + it.end : '') : tr('all day')}</div>
@@ -2673,18 +2701,24 @@ function ensureGcalRange(from, to) {
       let endTime = '';
       if (!allDay) { const sp = osloParts(ev.start.dateTime), ep = osloParts(ev.end.dateTime); start = sp.date; end = ep.date; time = sp.time; endTime = ep.time; if (end > start && endTime === '00:00') { end = addDays(end, -1); endTime = '24:00'; } }
       const days = []; for (let d = start, i = 0; d <= end && i < 14; d = addDays(d, 1), i++) days.push(d);
-      return { id: ev.id, title: ev.summary || '(no title)', allDay, multi: !allDay && days.length > 1, time, end: endTime, days, link: ev.htmlLink };
+      return { id: ev.id, title: ev.summary || '(no title)', allDay, multi: !allDay && days.length > 1, time, end: endTime, days, link: ev.htmlLink,
+        location: ev.location || '', description: ev.description || '' };
     });
     gcalError = '';
+    gcalPullLinked();
     renderCalendar();
   }).catch(e => { gcalError = e.message; gcalLoadedRange = ''; renderCalendar(); });
 }
 
-async function gcalPush(kind, id) {
-  if (!gcalConnected()) { gcalConnect(); return; }
+// What a linked task/important date looked like when it was last in sync with Google.
+// If only Google changed since then, the change is pulled in; if only the dashboard changed, "Sync" pushes it.
+function gcalSig(kind, item) { return [kind === 'dl' ? item.title : item.text, item.date || '', item.time || ''].join('|'); }
+
+async function gcalPush(kind, id, silent) {
+  if (!gcalConnected()) { gcalConnect(); return false; }
   const item = kind === 'dl' ? getDeadline(id) : S.tasks.find(t => t.id === id);
-  if (!item) return;
-  if (!item.date) { toast('NEEDS A DATE FIRST'); return; }
+  if (!item) return false;
+  if (!item.date) { if (!silent) toast('NEEDS A DATE FIRST'); return false; }
   const isDl = kind === 'dl';
   const body = { summary: isDl ? item.title : item.text };
   if (!isDl) {
@@ -2695,23 +2729,127 @@ async function gcalPush(kind, id) {
   } else if (!item.gcalId) {
     body.description = tr('Deadline') + ' · ' + tr('Priority') + ': ' + item.priority;
   }
-  if (item.time) {
-    const end = addMinutes(item.date, item.time, 60);
-    body.start = { dateTime: osloIso(item.date, item.time), timeZone: 'Europe/Oslo' };
-    body.end = { dateTime: osloIso(end.date, end.time), timeZone: 'Europe/Oslo' };
-  } else {
-    body.start = { date: item.date }; body.end = { date: addDays(item.date, 1) };
+  try {
+    // Keep the length of an existing event (e.g. a 4-hour exam) when moving it
+    let dur = 60;
+    if (item.gcalId) {
+      try {
+        const cur = await gcalApi('/calendars/primary/events/' + encodeURIComponent(item.gcalId));
+        if (cur && cur.start && cur.start.dateTime && cur.end && cur.end.dateTime) dur = Math.max(15, Math.round((Date.parse(cur.end.dateTime) - Date.parse(cur.start.dateTime)) / 60000));
+      } catch (e) { if (!/HTTP (404|410)/.test(e.message)) throw e; item.gcalId = ''; }
+    }
+    if (item.time) {
+      const end = addMinutes(item.date, item.time, dur);
+      body.start = { dateTime: osloIso(item.date, item.time), timeZone: 'Europe/Oslo' };
+      body.end = { dateTime: osloIso(end.date, end.time), timeZone: 'Europe/Oslo' };
+    } else {
+      body.start = { date: item.date }; body.end = { date: addDays(item.date, 1) };
+    }
+    let ev = null;
+    if (item.gcalId) ev = await gcalApi('/calendars/primary/events/' + encodeURIComponent(item.gcalId), { method: 'PATCH', body: JSON.stringify(body) });
+    if (!ev) ev = await gcalApi('/calendars/primary/events', { method: 'POST', body: JSON.stringify(body) });
+    item.gcalId = ev.id; item.gcalSig = gcalSig(kind, item); save();
+    if (!silent) { gcalLoadedRange = ''; render(); toast('SENT TO GOOGLE CALENDAR'); }
+    return true;
+  } catch (e) { if (!silent) toast('GOOGLE: ' + e.message); return false; }
+}
+
+// Pull edits made in Google into linked tasks / important dates (only when they were not changed here as well)
+function gcalPullLinked() {
+  const byId = new Map();
+  S.tasks.forEach(t => { if (t.gcalId) byId.set(t.gcalId, ['task', t]); });
+  S.deadlines.forEach(d => { if (d.gcalId) byId.set(d.gcalId, ['dl', d]); });
+  let n = 0;
+  gcalEvents.forEach(ev => {
+    const hit = byId.get(ev.id); if (!hit || ev.multi) return;
+    const [kind, item] = hit;
+    const g = { title: ev.title, date: ev.days[0], time: ev.allDay ? '' : ev.time };
+    const gSig = [g.title, g.date, g.time].join('|');
+    const localSig = gcalSig(kind, item);
+    if (gSig === localSig) { if (item.gcalSig !== gSig) { item.gcalSig = gSig; n += 0; } return; }
+    const untouchedHere = !item.gcalSig || item.gcalSig === localSig;
+    if (!untouchedHere) return;            // changed on both sides: the dashboard wins on the next sync
+    if (kind === 'dl') { item.title = g.title; item.date = g.date; item.time = g.time; item.estDate = ''; }
+    else { item.text = g.title; item.date = g.date; item.time = g.time; }
+    item.gcalSig = gSig; n++;
+  });
+  if (n) { save(); toast('UPDATED FROM GOOGLE CALENDAR'); setTimeout(render, 0); }
+}
+
+// One button: send local edits of linked items, then reload (which pulls Google's edits)
+async function gcalSyncAll() {
+  if (!gcalConnected()) { gcalConnect(); return; }
+  const todo = [...S.tasks.filter(t => t.gcalId && t.date && t.status !== 'discarded').map(t => ['task', t]),
+                ...S.deadlines.filter(d => d.gcalId && d.date).map(d => ['dl', d])]
+    .filter(([k, it]) => it.gcalSig !== gcalSig(k, it));
+  let sent = 0;
+  for (const [k, it] of todo) if (await gcalPush(k, it.id, true)) sent++;
+  gcalLoadedRange = ''; render();
+  toast(tr('SYNCED WITH GOOGLE') + (sent ? ' · ' + sent + ' ' + tr('sent') : ''));
+}
+
+// ---- Edit Google events directly ----
+function syncGevAllDay() {
+  const all = document.getElementById('gevAllDay').checked;
+  document.querySelectorAll('#gevPanel .gev-time').forEach(el => { el.style.display = all ? 'none' : ''; });
+}
+function openGev(id, date) {
+  if (!gcalConnected()) { gcalConnect(); return; }
+  const ev = id ? gcalEvents.find(e => e.id === id) : null;
+  const set = (k, v) => { document.getElementById(k).value = v; };
+  set('gevId', ev ? ev.id : '');
+  set('gevTitle', ev ? ev.title : '');
+  set('gevDate', ev ? ev.days[0] : (date || calSel));
+  set('gevStart', ev ? ev.time : '09:00');
+  set('gevEnd', ev ? (ev.end === '24:00' ? '23:59' : ev.end) : '10:00');
+  set('gevLocation', ev ? ev.location : '');
+  set('gevDesc', ev ? ev.description : '');
+  document.getElementById('gevAllDay').checked = !!(ev && ev.allDay);
+  const multi = !!(ev && ev.days.length > 1);
+  document.getElementById('gevMultiNote').style.display = multi ? '' : 'none';
+  ['gevDate', 'gevStart', 'gevEnd', 'gevAllDay'].forEach(k => { document.getElementById(k).disabled = multi; });
+  document.getElementById('gevDelBtn').style.display = ev ? '' : 'none';
+  document.getElementById('gevFormTitle').textContent = tr(ev ? 'Edit Google event' : 'New Google event');
+  syncGevAllDay();
+  const p = document.getElementById('gevPanel'); p.style.display = '';
+  p.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function closeGev() { document.getElementById('gevPanel').style.display = 'none'; }
+
+async function saveGev() {
+  if (!gcalConnected()) { gcalConnect(); return; }
+  const v = k => document.getElementById(k).value;
+  const id = v('gevId'), title = v('gevTitle').trim(), date = v('gevDate');
+  if (!title) { toast('FILL IN A TITLE'); return; }
+  const ev = id ? gcalEvents.find(e => e.id === id) : null;
+  const body = { summary: title, location: v('gevLocation').trim(), description: v('gevDesc') };
+  if (!(ev && ev.days.length > 1)) {
+    if (!date) { toast('PICK A DATE'); return; }
+    if (document.getElementById('gevAllDay').checked) { body.start = { date }; body.end = { date: addDays(date, 1) }; }
+    else {
+      const st = v('gevStart'), en = v('gevEnd');
+      if (!st || !en) { toast('FILL IN START AND END'); return; }
+      const endDate = t2m(en) <= t2m(st) ? addDays(date, 1) : date;   // ends after midnight
+      body.start = { dateTime: osloIso(date, st), timeZone: 'Europe/Oslo' };
+      body.end = { dateTime: osloIso(endDate, en), timeZone: 'Europe/Oslo' };
+    }
   }
   try {
-    let ev = null;
-    if (item.gcalId) {
-      try { ev = await gcalApi('/calendars/primary/events/' + encodeURIComponent(item.gcalId), { method: 'PATCH', body: JSON.stringify(body) }); }
-      catch (e) { if (!/HTTP (404|410)/.test(e.message)) throw e; }
-    }
-    if (!ev) ev = await gcalApi('/calendars/primary/events', { method: 'POST', body: JSON.stringify(body) });
-    item.gcalId = ev.id; save();
-    gcalLoadedRange = ''; render();
+    if (id) await gcalApi('/calendars/primary/events/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(body) });
+    else await gcalApi('/calendars/primary/events', { method: 'POST', body: JSON.stringify(body) });
+    closeGev(); gcalLoadedRange = ''; calSel = date || calSel; render();
     toast('SENT TO GOOGLE CALENDAR');
+  } catch (e) { toast('GOOGLE: ' + e.message); }
+}
+
+async function deleteGev() {
+  const id = document.getElementById('gevId').value; if (!id) return;
+  if (!confirm(tr('Delete this event in Google Calendar?'))) return;
+  try {
+    await gcalApi('/calendars/primary/events/' + encodeURIComponent(id), { method: 'DELETE' });
+    [...S.tasks, ...S.deadlines].forEach(x => { if (x.gcalId === id) { x.gcalId = ''; x.gcalSig = ''; } });
+    save(); closeGev(); gcalLoadedRange = ''; render();
+    toast('DELETED IN GOOGLE CALENDAR');
   } catch (e) { toast('GOOGLE: ' + e.message); }
 }
 
