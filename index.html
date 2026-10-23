@@ -699,6 +699,23 @@
   body[data-theme="standard"] .ex { border-radius: 4px; }
   body[data-theme="standard"] .wk, body[data-theme="standard"] .prog-box { border-radius: 6px; }
 
+  /* Body / anatomy */
+  .body-stage { position: relative; width: 100%; height: min(72vh, 680px); min-height: 380px; border: 1px solid var(--pip-green-dark); touch-action: none; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 40%, var(--pip-panel), transparent 70%); }
+  .body-stage canvas { display: block; }
+  .body-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; letter-spacing: 2px; color: var(--pip-green-dim); pointer-events: none; }
+  .anat-names { margin: 4px 0 8px; font-size: 13px; line-height: 1.6; }
+  .anat-names i { font-size: 15px; }
+  .anat-lang { display: inline-block; width: 24px; font-size: 9px; letter-spacing: 1px; color: var(--pip-green-dim); }
+  .anat-type { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--pip-amber); }
+  .anat-sub { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--pip-green-dim); margin-top: 6px; }
+  .anat-list { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
+  .anat-item.active { border-color: var(--pip-green); background: var(--pip-panel); }
+  .anat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  .anat-dot.t-muscle { background: #1fbf22; } .anat-dot.t-tendon { background: #9ffcff; } .anat-dot.t-ligament { background: #fe9a14; }
+  body[data-theme="standard"] .anat-dot.t-muscle { background: #b5483d; } body[data-theme="standard"] .anat-dot.t-tendon { background: #d9cfb3; border: 1px solid #a99f86; } body[data-theme="standard"] .anat-dot.t-ligament { background: #d9b45a; }
+  body[data-theme="standard"] .body-stage { border-radius: 8px; }
+
   /* Connections / sync */
   .conn-block { border-top: 1px solid var(--pip-green-dark); padding-top: 10px; margin-top: 10px; }
   .conn-status { font-size: 11px; color: var(--pip-green-dim); letter-spacing: 1px; margin: 4px 0; }
@@ -902,6 +919,7 @@
     <button class="pip-tab" data-section="calendar" onclick="switchSection('calendar')">Calendar</button>
     <button class="pip-tab" data-section="tasks" onclick="switchSection('tasks')">Tasks</button>
     <button class="pip-tab" data-section="courses" onclick="switchSection('courses')">Courses</button>
+    <button class="pip-tab" data-section="body" onclick="switchSection('body')">Body</button>
     <button class="pip-tab" data-section="map" onclick="switchSection('map')">Map</button>
     <button class="pip-tab" data-section="log" onclick="switchSection('log')">Log</button>
   </div>
@@ -1133,6 +1151,36 @@
     <div class="panel">
       <div class="course-tabs" id="courseTabs"></div>
       <div id="courseView"></div>
+    </div>
+  </div>
+
+  <!-- ==================== BODY ==================== -->
+  <div class="section" id="section-body">
+    <div class="panel">
+      <div class="cal-toolbar">
+        <button class="range-btn" onclick="bodyView('front')">Front</button>
+        <button class="range-btn" onclick="bodyView('back')">Back</button>
+        <button class="range-btn" onclick="bodyView('left')">Left side</button>
+        <button class="range-btn" onclick="bodyView('right')">Right side</button>
+        <button class="range-btn" id="bodyRotBtn" onclick="bodyToggleRotate()">&#10227; Rotate</button>
+        <button class="range-btn" onclick="bodyReset()">Reset</button>
+      </div>
+      <div class="cal-toolbar">
+        <button class="range-btn active" data-blayer="muscle" onclick="bodyToggleLayer('muscle')"><span class="anat-dot t-muscle"></span> Muscles</button>
+        <button class="range-btn active" data-blayer="tendon" onclick="bodyToggleLayer('tendon')"><span class="anat-dot t-tendon"></span> Tendons</button>
+        <button class="range-btn active" data-blayer="ligament" onclick="bodyToggleLayer('ligament')"><span class="anat-dot t-ligament"></span> Ligaments</button>
+      </div>
+      <div class="body-stage" id="bodyStage"><div class="body-msg" id="bodyMsg"></div></div>
+      <div class="field-help" style="margin-top:6px">Drag to rotate 360° · pinch or scroll to zoom · tap a structure to zoom in on it</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">// Selected</div>
+      <div id="bodyInfo"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">// All structures</div>
+      <div class="input-row"><input type="text" class="pip-input" placeholder="Search (Latin, Norwegian or English)" oninput="setBodyFilter(this.value)"></div>
+      <div id="bodyList"></div>
     </div>
   </div>
 
@@ -2379,6 +2427,14 @@ const I18N = [
   ['NO COURSES YET. IMPORT YOUR PROGRESS PLAN UNDER LOG → DATA, OR ADD A COURSE.', 'INGEN FAG ENNÅ. IMPORTER FREMDRIFTSPLANEN UNDER LOGG → DATA, ELLER LEGG TIL ET FAG.'],
   ['Exam', 'Eksamen'], ['THAT IS NOT VALID JSON', 'DETTE ER IKKE GYLDIG JSON'], ['FOUND NO WEEKS OR LECTURES IN THE JSON', 'FANT INGEN UKER ELLER FORELESNINGER I JSON-EN'],
   ['COURSE UPDATED', 'FAG OPPDATERT'],
+  ['Body', 'Kropp'], ['Front', 'Forfra'], ['Back', 'Bakfra'], ['Left side', 'Venstre side'], ['Right side', 'Høyre side'], ['⟳ Rotate', '⟳ Roter'],
+  ['Muscles', 'Muskler'], ['Tendons', 'Sener'], ['Ligaments', 'Leddbånd'], ['Muscle', 'Muskel'], ['Tendon', 'Sene'], ['Ligament', 'Leddbånd'],
+  ['Drag to rotate 360° · pinch or scroll to zoom · tap a structure to zoom in on it', 'Dra for å rotere 360° · klyp eller scroll for å zoome · trykk på en struktur for å zoome inn på den'],
+  ['// Selected', '// Valgt'], ['// All structures', '// Alle strukturer'], ['Search (Latin, Norwegian or English)', 'Søk (latin, norsk eller engelsk)'],
+  ['Loading 3D model...', 'Laster 3D-modell...'], ['Could not load the 3D library. Check your connection.', 'Kunne ikke laste 3D-biblioteket. Sjekk nettforbindelsen.'],
+  ['Tap a muscle, tendon or ligament on the model, or pick one from the list below.', 'Trykk på en muskel, sene eller et leddbånd på modellen, eller velg fra lista under.'],
+  ['Midline', 'Midtlinjen'], ['Part of muscle group', 'Del av muskelgruppen'], ['Region', 'Område'], ['Zoom out', 'Zoom ut'],
+  ['Function, common complaints, causes and treatment come in the next version.', 'Funksjon, vanlige plager, årsaker og behandling kommer i neste versjon.'],
   ['Google event', 'Google-hendelse'], ['Edit Google event', 'Rediger Google-hendelse'], ['New Google event', 'Ny Google-hendelse'], ['All day', 'Hele dagen'],
   ['End', 'Slutt'], ['Save to Google', 'Lagre i Google'], ['Delete in Google', 'Slett i Google'], ['⇅ Sync Google', '⇅ Synk Google'],
   ['This event spans several days. Change its dates in Google Calendar; here you can edit title, place and description.', 'Hendelsen går over flere dager. Endre datoene i Google Kalender; her kan du endre tittel, sted og beskrivelse.'],
@@ -3326,6 +3382,409 @@ function lessonHtml(c, l, today) {
   return h + '</div>';
 }
 
+// ==================== BODY (interactive 3D anatomy) ====================
+// Structure:
+//   BODY_REGIONS  – areas of the body (later: common complaints, causes, treatment per region)
+//   BODY_GROUPS   – muscle groups (later: what the group does / info text)
+//   BODY_PARTS    – every muscle, tendon and ligament: names (Latin, Norwegian, English), type,
+//                   region, group and the 3D shapes it is built from (left side; mirrored to the right)
+// The figure is built procedurally with Three.js (loaded from CDN only when the tab is opened):
+// 'seg' = spindle/rod between two points, 'ell' = ellipsoid. Units are metres, y up, the body faces +z,
+// and x > 0 is the body's LEFT side. Info and complaints are intentionally not added yet.
+const THREE_URLS = ['https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
+                    'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js'];
+
+const BODY_REGIONS = {
+  head:      { la: 'Caput', no: 'Hode', en: 'Head' },
+  neck:      { la: 'Collum', no: 'Nakke og hals', en: 'Neck' },
+  shoulder:  { la: 'Regio deltoidea', no: 'Skulder', en: 'Shoulder' },
+  chest:     { la: 'Thorax', no: 'Bryst', en: 'Chest' },
+  abdomen:   { la: 'Abdomen', no: 'Mage', en: 'Abdomen' },
+  upperback: { la: 'Dorsum (pars superior)', no: 'Øvre rygg', en: 'Upper back' },
+  lowerback: { la: 'Regio lumbalis', no: 'Korsrygg', en: 'Lower back' },
+  upperarm:  { la: 'Brachium', no: 'Overarm', en: 'Upper arm' },
+  elbow:     { la: 'Cubitus', no: 'Albue', en: 'Elbow' },
+  forearm:   { la: 'Antebrachium', no: 'Underarm', en: 'Forearm' },
+  hip:       { la: 'Regio glutealis et coxae', no: 'Hofte og sete', en: 'Hip and buttocks' },
+  thigh:     { la: 'Femur (regio femoris)', no: 'Lår', en: 'Thigh' },
+  knee:      { la: 'Genu', no: 'Kne', en: 'Knee' },
+  leg:       { la: 'Crus', no: 'Legg', en: 'Lower leg' },
+  ankle:     { la: 'Regio talocruralis', no: 'Ankel', en: 'Ankle' },
+};
+
+const BODY_GROUPS = {
+  deltoid:     { la: 'Musculus deltoideus', no: 'Deltamuskelen', en: 'Deltoid' },
+  rotatorcuff: { la: 'Musculi rotatores humeri', no: 'Rotatormansjetten', en: 'Rotator cuff' },
+  abdominals:  { la: 'Musculi abdominis', no: 'Bukmusklene', en: 'Abdominal muscles' },
+  forearm:     { la: 'Musculi antebrachii', no: 'Underarmsmusklene', en: 'Forearm muscles' },
+  gluteals:    { la: 'Musculi glutei', no: 'Setemusklene', en: 'Gluteal muscles' },
+  quadriceps:  { la: 'Musculus quadriceps femoris', no: 'Firehodet lårmuskel (quadriceps)', en: 'Quadriceps' },
+  hamstrings:  { la: 'Musculi ischiocrurales', no: 'Hamstrings (baksiden av låret)', en: 'Hamstrings' },
+  adductors:   { la: 'Musculi adductores femoris', no: 'Lårinnførerne (adduktorene)', en: 'Hip adductors' },
+  calf:        { la: 'Musculus triceps surae', no: 'Leggmusklene (triceps surae)', en: 'Calf muscles (triceps surae)' },
+  kneelig:     { la: 'Ligamenta genus', no: 'Knærnes leddbånd', en: 'Knee ligaments' },
+};
+
+function buildBodyParts() {
+  const S = [0.19, 1.43, 0], E = [0.25, 1.15, -0.01], W = [0.29, 0.90, 0.02];
+  const H = [0.09, 0.92, 0], K = [0.10, 0.50, 0.01], A = [0.10, 0.08, -0.01];
+  const L = (a, b, t, dx = 0, dy = 0, dz = 0) => [a[0] + (b[0] - a[0]) * t + dx, a[1] + (b[1] - a[1]) * t + dy, a[2] + (b[2] - a[2]) * t + dz];
+  const seg = (a, b, r, p = 0.6, flat = 1) => ({ k: 'seg', a, b, r, p, flat });
+  const rod = (a, b, r) => ({ k: 'seg', a, b, r, p: 0.12, flat: 1 });
+  const ell = (c, r, rot = [0, 0, 0]) => ({ k: 'ell', c, r, rot });
+  const P = (id, type, region, group, la, no, en, shapes, side = 'both') => ({ id, type, region, group, la, no, en, shapes, side });
+  const m = 'muscle', t = 'tendon', l = 'ligament';
+  return [
+    // Head & neck
+    P('masseter', m, 'head', null, 'Musculus masseter', 'Tyggemuskelen (masseter)', 'Masseter', [ell([0.065, 1.615, 0.045], [0.016, 0.035, 0.025], [0, 0.3, 0])]),
+    P('temporalis', m, 'head', null, 'Musculus temporalis', 'Tinningmuskelen', 'Temporalis', [ell([0.072, 1.695, 0.01], [0.014, 0.045, 0.05])]),
+    P('scm', m, 'neck', null, 'Musculus sternocleidomastoideus', 'Kopnikkeren', 'Sternocleidomastoid', [seg([0.055, 1.6, -0.02], [0.02, 1.455, 0.065], 0.016, 0.5)]),
+    P('nuchae', l, 'neck', null, 'Ligamentum nuchae', 'Nakkebåndet', 'Nuchal ligament', [rod([0, 1.47, -0.065], [0, 1.6, -0.07], 0.006)], 'mid'),
+    // Shoulder
+    P('delt-ant', m, 'shoulder', 'deltoid', 'Musculus deltoideus, pars clavicularis', 'Deltamuskelen, fremre del', 'Anterior deltoid', [ell([0.195, 1.405, 0.045], [0.03, 0.075, 0.028], [0.1, 0, 0.25])]),
+    P('delt-lat', m, 'shoulder', 'deltoid', 'Musculus deltoideus, pars acromialis', 'Deltamuskelen, midtre del', 'Lateral deltoid', [ell([0.232, 1.40, 0.0], [0.03, 0.08, 0.04], [0, 0, 0.3])]),
+    P('delt-post', m, 'shoulder', 'deltoid', 'Musculus deltoideus, pars spinalis', 'Deltamuskelen, bakre del', 'Posterior deltoid', [ell([0.195, 1.405, -0.045], [0.03, 0.075, 0.028], [-0.1, 0, 0.25])]),
+    P('ac-lig', l, 'shoulder', null, 'Ligamentum acromioclaviculare', 'Leddbåndet i AC-leddet (skulderens takledd)', 'Acromioclavicular ligament', [rod([0.15, 1.475, 0.0], [0.185, 1.47, 0.0], 0.006)]),
+    P('infraspinatus', m, 'shoulder', 'rotatorcuff', 'Musculus infraspinatus', 'Infraspinatus (del av rotatormansjetten)', 'Infraspinatus', [ell([0.125, 1.35, -0.1], [0.05, 0.04, 0.016], [0, 0.3, 0])]),
+    P('teres-major', m, 'shoulder', null, 'Musculus teres major', 'Store runde muskel', 'Teres major', [seg([0.13, 1.29, -0.095], [0.2, 1.36, -0.035], 0.018, 0.5)]),
+    // Chest & abdomen
+    P('pec-major', m, 'chest', null, 'Musculus pectoralis major', 'Store brystmuskel', 'Pectoralis major', [ell([0.08, 1.345, 0.088], [0.09, 0.065, 0.032], [0, 0.25, -0.1])]),
+    P('serratus', m, 'chest', null, 'Musculus serratus anterior', 'Fremre sagmuskel', 'Serratus anterior', [ell([0.148, 1.24, 0.045], [0.025, 0.07, 0.045])]),
+    P('rectus-abd', m, 'abdomen', 'abdominals', 'Musculus rectus abdominis', 'Rette bukmuskel', 'Rectus abdominis', [ell([0.038, 1.10, 0.088], [0.034, 0.16, 0.022])]),
+    P('ext-oblique', m, 'abdomen', 'abdominals', 'Musculus obliquus externus abdominis', 'Ytre skrå bukmuskel', 'External abdominal oblique', [ell([0.105, 1.08, 0.055], [0.045, 0.12, 0.055], [0, 0.5, 0])]),
+    P('linea-alba', t, 'abdomen', 'abdominals', 'Linea alba', 'Den hvite linje (linea alba)', 'Linea alba', [rod([0, 0.95, 0.096], [0, 1.24, 0.105], 0.005)], 'mid'),
+    P('inguinal', l, 'abdomen', null, 'Ligamentum inguinale', 'Lyskebåndet', 'Inguinal ligament', [rod([0.13, 0.975, 0.07], [0.025, 0.875, 0.095], 0.005)]),
+    // Back
+    P('trapezius', m, 'upperback', null, 'Musculus trapezius', 'Kappemuskelen', 'Trapezius', [
+      seg([0.025, 1.58, -0.045], [0.17, 1.465, -0.02], 0.03, 0.5, 0.6),
+      ell([0.075, 1.40, -0.09], [0.095, 0.07, 0.028], [0.15, 0, 0]),
+      ell([0.04, 1.29, -0.098], [0.045, 0.08, 0.02])]),
+    P('rhomboid', m, 'upperback', null, 'Musculus rhomboideus major', 'Store rombemuskel', 'Rhomboid major', [ell([0.055, 1.34, -0.098], [0.03, 0.05, 0.012])]),
+    P('latissimus', m, 'upperback', null, 'Musculus latissimus dorsi', 'Brede ryggmuskel', 'Latissimus dorsi', [ell([0.105, 1.18, -0.07], [0.07, 0.14, 0.035], [0, -0.5, 0.15])]),
+    P('erector', m, 'lowerback', null, 'Musculus erector spinae', 'Ryggstrekkeren', 'Erector spinae', [seg([0.035, 0.95, -0.088], [0.03, 1.45, -0.08], 0.026, 0.5, 0.6)]),
+    // Upper arm & elbow
+    P('biceps', m, 'upperarm', null, 'Musculus biceps brachii', 'Tohodet overarmsmuskel (biceps)', 'Biceps brachii', [seg(L(S, E, 0.18, 0, 0, 0.033), L(S, E, 0.85, 0, 0, 0.03), 0.03)]),
+    P('triceps', m, 'upperarm', null, 'Musculus triceps brachii', 'Trehodet overarmsmuskel (triceps)', 'Triceps brachii', [seg(L(S, E, 0.05, 0, 0, -0.035), L(S, E, 0.92, 0, 0, -0.03), 0.034, 0.55)]),
+    P('brachialis', m, 'upperarm', null, 'Musculus brachialis', 'Brachialis (dyp albuebøyer)', 'Brachialis', [seg(L(S, E, 0.5, 0.028, 0, 0.015), L(S, E, 0.97, 0.02, 0, 0.02), 0.02)]),
+    P('biceps-tendon', t, 'elbow', null, 'Tendo musculi bicipitis brachii (distalis)', 'Bicepssenen (nedre)', 'Distal biceps tendon', [rod(L(S, E, 0.85, 0, 0, 0.03), L(E, W, 0.12, 0, 0, 0.02), 0.006)]),
+    P('ucl', l, 'elbow', null, 'Ligamentum collaterale ulnare', 'Indre sideleddsbånd i albuen', 'Ulnar collateral ligament', [rod(L(S, E, 0.95, -0.035), L(E, W, 0.08, -0.03), 0.005)]),
+    // Forearm
+    P('brachioradialis', m, 'forearm', 'forearm', 'Musculus brachioradialis', 'Brachioradialis', 'Brachioradialis', [seg(L(S, E, 0.7, 0.035, 0, 0.005), L(E, W, 0.8, 0.02, 0, 0.02), 0.02)]),
+    P('flexors', m, 'forearm', 'forearm', 'Musculi flexores antebrachii', 'Underarmens bøyemuskler (fleksorene)', 'Forearm flexors', [seg(L(E, W, 0.05, -0.018, 0, 0.02), L(E, W, 0.8, -0.01, 0, 0.02), 0.028)]),
+    P('extensors', m, 'forearm', 'forearm', 'Musculi extensores antebrachii', 'Underarmens strekkemuskler (ekstensorene)', 'Forearm extensors', [seg(L(E, W, 0.08, 0.015, 0, -0.022), L(E, W, 0.82, 0.01, 0, -0.02), 0.026)]),
+    // Hip
+    P('glute-max', m, 'hip', 'gluteals', 'Musculus gluteus maximus', 'Store setemuskel', 'Gluteus maximus', [ell([0.08, 0.875, -0.1], [0.085, 0.095, 0.05], [0, 0, -0.2])]),
+    P('glute-med', m, 'hip', 'gluteals', 'Musculus gluteus medius', 'Mellomste setemuskel', 'Gluteus medius', [ell([0.135, 0.975, -0.045], [0.045, 0.05, 0.045])]),
+    P('tfl', m, 'hip', null, 'Musculus tensor fasciae latae', 'Lårfascie-strammeren (TFL)', 'Tensor fasciae latae', [seg([0.15, 0.965, 0.035], [0.165, 0.85, 0.02], 0.02)]),
+    P('it-band', t, 'thigh', null, 'Tractus iliotibialis', 'Iliotibialbåndet (IT-båndet)', 'Iliotibial band', [rod([0.165, 0.85, 0.005], L(H, K, 0.95, 0.07), 0.007)]),
+    // Thigh front
+    P('rectus-fem', m, 'thigh', 'quadriceps', 'Musculus rectus femoris', 'Rette lårmuskel', 'Rectus femoris', [seg(L(H, K, 0.05, 0.01, 0, 0.055), L(H, K, 0.86, 0, 0, 0.055), 0.032)]),
+    P('vastus-lat', m, 'thigh', 'quadriceps', 'Musculus vastus lateralis', 'Ytre vide lårmuskel', 'Vastus lateralis', [seg(L(H, K, 0.12, 0.05, 0, 0.02), L(H, K, 0.88, 0.04, 0, 0.025), 0.04)]),
+    P('vastus-med', m, 'thigh', 'quadriceps', 'Musculus vastus medialis', 'Indre vide lårmuskel', 'Vastus medialis', [seg(L(H, K, 0.4, -0.04, 0, 0.03), L(H, K, 0.93, -0.03, 0, 0.035), 0.034, 0.5)]),
+    P('sartorius', m, 'thigh', null, 'Musculus sartorius', 'Skreddermuskelen', 'Sartorius', [
+      seg([0.135, 0.965, 0.065], L(H, K, 0.5, -0.02, 0, 0.065), 0.013, 0.2),
+      seg(L(H, K, 0.5, -0.02, 0, 0.065), L(H, K, 0.98, -0.06, 0, 0.0), 0.013, 0.2)]),
+    P('add-longus', m, 'thigh', 'adductors', 'Musculus adductor longus', 'Lange lårinnfører', 'Adductor longus', [seg([0.03, 0.86, 0.045], L(H, K, 0.5, -0.055, 0, 0.02), 0.024)]),
+    P('add-magnus', m, 'thigh', 'adductors', 'Musculus adductor magnus', 'Store lårinnfører', 'Adductor magnus', [seg([0.04, 0.83, -0.03], L(H, K, 0.75, -0.055, 0, -0.02), 0.03)]),
+    P('gracilis', m, 'thigh', 'adductors', 'Musculus gracilis', 'Grasilis (den slanke lårmuskelen)', 'Gracilis', [seg([0.025, 0.85, 0.015], L(H, K, 0.96, -0.065, 0, -0.01), 0.015, 0.4)]),
+    P('quad-tendon', t, 'knee', 'quadriceps', 'Tendo musculi quadricipitis femoris', 'Quadricepssenen', 'Quadriceps tendon', [seg(L(H, K, 0.86, 0, 0, 0.058), L(H, K, 0.97, 0, 0, 0.065), 0.012, 0.15)]),
+    P('patellar', l, 'knee', 'kneelig', 'Ligamentum patellae', 'Kneskjellsenen (patellarsenen)', 'Patellar ligament (patellar tendon)', [rod([K[0], K[1] - 0.01, 0.065], [K[0], K[1] - 0.08, 0.055], 0.008)]),
+    // Thigh back
+    P('biceps-fem', m, 'thigh', 'hamstrings', 'Musculus biceps femoris', 'Tohodet lårmuskel', 'Biceps femoris', [seg(L(H, K, 0.12, 0.03, 0, -0.055), L(H, K, 0.92, 0.045, 0, -0.04), 0.032)]),
+    P('semitend', m, 'thigh', 'hamstrings', 'Musculus semitendinosus', 'Halvsenemuskelen', 'Semitendinosus', [seg(L(H, K, 0.1, -0.015, 0, -0.06), L(H, K, 0.9, -0.04, 0, -0.045), 0.025)]),
+    P('semimem', m, 'thigh', 'hamstrings', 'Musculus semimembranosus', 'Halvhinnemuskelen', 'Semimembranosus', [seg(L(H, K, 0.35, -0.035, 0, -0.045), L(H, K, 0.95, -0.045, 0, -0.035), 0.028)]),
+    // Knee ligaments
+    P('mcl', l, 'knee', 'kneelig', 'Ligamentum collaterale tibiale', 'Indre sideleddsbånd i kneet', 'Medial collateral ligament (MCL)', [rod([K[0] - 0.06, K[1] + 0.03, 0.005], [K[0] - 0.055, K[1] - 0.05, 0.01], 0.006)]),
+    P('lcl', l, 'knee', 'kneelig', 'Ligamentum collaterale fibulare', 'Ytre sideleddsbånd i kneet', 'Lateral collateral ligament (LCL)', [rod([K[0] + 0.06, K[1] + 0.03, 0], [K[0] + 0.055, K[1] - 0.05, -0.005], 0.005)]),
+    P('acl', l, 'knee', 'kneelig', 'Ligamentum cruciatum anterius', 'Fremre korsbånd', 'Anterior cruciate ligament (ACL)', [rod([K[0] + 0.012, K[1] + 0.02, -0.015], [K[0] - 0.004, K[1] - 0.015, 0.02], 0.006)]),
+    P('pcl', l, 'knee', 'kneelig', 'Ligamentum cruciatum posterius', 'Bakre korsbånd', 'Posterior cruciate ligament (PCL)', [rod([K[0] - 0.012, K[1] + 0.02, 0.015], [K[0] + 0.002, K[1] - 0.02, -0.02], 0.006)]),
+    // Lower leg
+    P('gastroc-med', m, 'leg', 'calf', 'Musculus gastrocnemius, caput mediale', 'Tvillingleggmuskelen, indre hode', 'Gastrocnemius, medial head', [seg(L(K, A, 0.02, -0.02, 0, -0.04), L(K, A, 0.52, -0.008, 0, -0.045), 0.032, 0.55)]),
+    P('gastroc-lat', m, 'leg', 'calf', 'Musculus gastrocnemius, caput laterale', 'Tvillingleggmuskelen, ytre hode', 'Gastrocnemius, lateral head', [seg(L(K, A, 0.02, 0.02, 0, -0.04), L(K, A, 0.45, 0.01, 0, -0.04), 0.028, 0.55)]),
+    P('soleus', m, 'leg', 'calf', 'Musculus soleus', 'Flyndremuskelen', 'Soleus', [seg(L(K, A, 0.25, 0, 0, -0.03), L(K, A, 0.82, 0, 0, -0.035), 0.034, 0.6, 0.6)]),
+    P('tib-ant', m, 'leg', null, 'Musculus tibialis anterior', 'Fremre skinnebeinsmuskel', 'Tibialis anterior', [seg(L(K, A, 0.08, 0.015, 0, 0.035), L(K, A, 0.85, 0.005, 0, 0.035), 0.022)]),
+    P('ext-dig', m, 'leg', null, 'Musculus extensor digitorum longus', 'Lange tåstrekker', 'Extensor digitorum longus', [seg(L(K, A, 0.12, 0.033, 0, 0.02), L(K, A, 0.9, 0.02, 0, 0.03), 0.014)]),
+    P('fib-long', m, 'leg', null, 'Musculus fibularis (peroneus) longus', 'Lange leggbeinsmuskel', 'Fibularis (peroneus) longus', [seg(L(K, A, 0.06, 0.045), L(K, A, 0.72, 0.04, 0, -0.008), 0.018)]),
+    P('achilles', t, 'ankle', 'calf', 'Tendo calcaneus (Achillis)', 'Akillessenen', 'Achilles tendon (calcaneal tendon)', [seg(L(K, A, 0.62, 0, 0, -0.045), [A[0], 0.035, -0.065], 0.009, 0.15)]),
+    // Ankle
+    P('atfl', l, 'ankle', null, 'Ligamentum talofibulare anterius', 'Fremre talofibulare leddbånd (ytre ankelbånd)', 'Anterior talofibular ligament (ATFL)', [rod([A[0] + 0.035, 0.075, 0.0], [A[0] + 0.03, 0.06, 0.03], 0.005)]),
+    P('deltoid-lig', l, 'ankle', null, 'Ligamentum deltoideum (collaterale mediale)', 'Deltaligamentet (indre ankelbånd)', 'Deltoid ligament (medial ankle)', [rod([A[0] - 0.035, 0.08, -0.005], [A[0] - 0.03, 0.05, 0.01], 0.007)]),
+  ];
+}
+
+// Neutral body under the muscles (not clickable)
+function bodyBaseShapes() {
+  const S = [0.19, 1.43, 0], E = [0.25, 1.15, -0.01], W = [0.29, 0.90, 0.02];
+  const H = [0.09, 0.92, 0], K = [0.10, 0.50, 0.01], A = [0.10, 0.08, -0.01];
+  const limb = (a, b, r) => ({ k: 'seg', a, b, r, p: 0.15, flat: 1 });
+  const ell = (c, r, rot = [0, 0, 0]) => ({ k: 'ell', c, r, rot });
+  return {
+    mid: [ell([0, 1.67, 0.005], [0.078, 0.105, 0.095]), limb([0, 1.45, -0.01], [0, 1.62, 0], 0.05),
+          ell([0, 1.31, 0], [0.165, 0.16, 0.105]), ell([0, 1.09, 0], [0.135, 0.16, 0.095]), ell([0, 0.93, -0.01], [0.16, 0.1, 0.105])],
+    side: [ell(S, [0.05, 0.05, 0.05]), limb(S, E, 0.042), limb(E, W, 0.035), ell([0.305, 0.82, 0.025], [0.022, 0.07, 0.04]),
+           limb(H, K, 0.07), limb(K, A, 0.045), ell([0.105, 0.035, 0.05], [0.04, 0.03, 0.11])],
+  };
+}
+
+let BODY = null;                 // { renderer, scene, camera, controls, meshes, ... } once loaded
+let bodyLoading = false;
+let bodySel = null;              // { id, side }
+let bodyLayers = { muscle: true, tendon: true, ligament: true };
+let bodyAnim = null;             // camera tween
+let bodyRunning = false;
+const BODY_PARTS = buildBodyParts();
+
+function loadScriptOnce(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[data-src="${src}"]`)) return res();
+    const el = document.createElement('script'); el.src = src; el.dataset.src = src; el.async = false;
+    el.onload = () => res(); el.onerror = () => rej(new Error('Could not load ' + src));
+    document.head.appendChild(el);
+  });
+}
+
+function bodyColors() {
+  const std = document.body.dataset.theme === 'standard';
+  return std
+    ? { muscle: 0xb5483d, tendon: 0xeee3c8, ligament: 0xd9b45a, base: 0xd8cfc4, sel: 0x2f6fe0, bg: null }
+    : { muscle: 0x1fbf22, tendon: 0x9ffcff, ligament: 0xfe9a14, base: 0x1a3a1a, sel: 0xffffff, bg: null };
+}
+
+function bodyGeometry(sh) {
+  const T = window.THREE;
+  if (sh.k === 'ell') {
+    const g = new T.SphereGeometry(1, 28, 18);
+    g.scale(sh.r[0], sh.r[1], sh.r[2]);
+    return g;
+  }
+  const a = new T.Vector3(...sh.a), b = new T.Vector3(...sh.b);
+  const len = a.distanceTo(b), pts = [], N = 22;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    pts.push(new T.Vector2(Math.max(0.0005, sh.r * Math.pow(Math.sin(Math.PI * t), sh.p)), t * len));
+  }
+  const g = new T.LatheGeometry(pts, 20);
+  if (sh.flat !== 1) g.scale(1, 1, sh.flat);
+  return g;
+}
+
+function bodyPlace(mesh, sh, mirror) {
+  const T = window.THREE, mx = v => [mirror ? -v[0] : v[0], v[1], v[2]];
+  if (sh.k === 'ell') {
+    mesh.position.set(...mx(sh.c));
+    mesh.rotation.set(sh.rot[0], mirror ? -sh.rot[1] : sh.rot[1], mirror ? -sh.rot[2] : sh.rot[2]);
+  } else {
+    const a = new T.Vector3(...mx(sh.a)), b = new T.Vector3(...mx(sh.b));
+    mesh.position.copy(a);
+    mesh.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+  }
+}
+
+async function initBody() {
+  if (BODY || bodyLoading) return;
+  const stage = document.getElementById('bodyStage');
+  bodyLoading = true;
+  document.getElementById('bodyMsg').textContent = tr('Loading 3D model...');
+  try { for (const u of THREE_URLS) await loadScriptOnce(u); }
+  catch (e) { document.getElementById('bodyMsg').textContent = tr('Could not load the 3D library. Check your connection.'); bodyLoading = false; return; }
+  const T = window.THREE, col = bodyColors();
+  const renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  stage.appendChild(renderer.domElement);
+  const scene = new T.Scene();
+  const camera = new T.PerspectiveCamera(32, 1, 0.01, 50);
+  camera.position.set(0, 1.0, 4.2);
+  const controls = new T.OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 0.95, 0);
+  controls.enableDamping = true; controls.dampingFactor = 0.08;
+  controls.minDistance = 0.25; controls.maxDistance = 7;
+  controls.autoRotateSpeed = 1.5;
+  scene.add(new T.HemisphereLight(0xffffff, 0x333333, 0.75));
+  const key = new T.DirectionalLight(0xffffff, 0.75); key.position.set(1.5, 3, 3); scene.add(key);
+  const rim = new T.DirectionalLight(0xffffff, 0.45); rim.position.set(-2, 2, -3); scene.add(rim);
+
+  // Base body
+  const baseMat = new T.MeshStandardMaterial({ color: col.base, transparent: true, opacity: 0.35, depthWrite: false, roughness: 0.9 });
+  const base = bodyBaseShapes();
+  const addBase = (sh, mirror) => { const me = new T.Mesh(bodyGeometry(sh), baseMat); bodyPlace(me, sh, mirror); scene.add(me); };
+  base.mid.forEach(sh => addBase(sh, false));
+  base.side.forEach(sh => { addBase(sh, false); addBase(sh, true); });
+
+  // Muscles, tendons, ligaments: one material per mesh so a selection can glow
+  const meshes = [];
+  BODY_PARTS.forEach(part => {
+    const sides = part.side === 'mid' ? ['mid'] : ['left', 'right'];
+    sides.forEach(side => part.shapes.forEach(sh => {
+      const mat = new T.MeshStandardMaterial({ color: col[part.type], roughness: part.type === 'muscle' ? 0.6 : 0.35, metalness: 0.05, transparent: true, opacity: 1 });
+      const me = new T.Mesh(bodyGeometry(sh), mat);
+      bodyPlace(me, sh, side === 'right');
+      me.userData = { id: part.id, side, type: part.type };
+      scene.add(me); meshes.push(me);
+    }));
+  });
+
+  BODY = { renderer, scene, camera, controls, meshes, baseMat, raycaster: new T.Raycaster(), home: { pos: camera.position.clone(), target: controls.target.clone() } };
+  document.getElementById('bodyMsg').textContent = '';
+  bodyLoading = false;
+
+  // Tap/click (not drag) selects
+  let down = null;
+  renderer.domElement.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; if (bodyAnim) bodyAnim = null; });
+  renderer.domElement.addEventListener('pointerup', e => {
+    if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
+    const r = renderer.domElement.getBoundingClientRect();
+    const v = new T.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    BODY.raycaster.setFromCamera(v, camera);
+    const hit = BODY.raycaster.intersectObjects(meshes.filter(me => me.visible), false)[0];
+    if (hit) bodySelect(hit.object.userData.id, hit.object.userData.side);
+  });
+  new ResizeObserver(bodyResize).observe(stage);
+  bodyResize();
+  bodyApplyLayers();
+  bodyStart();
+}
+
+function bodyResize() {
+  if (!BODY) return;
+  const st = document.getElementById('bodyStage');
+  const w = st.clientWidth, h = st.clientHeight;
+  if (!w || !h) return;
+  BODY.renderer.setSize(w, h, false);
+  BODY.renderer.domElement.style.width = w + 'px'; BODY.renderer.domElement.style.height = h + 'px';
+  BODY.camera.aspect = w / h; BODY.camera.updateProjectionMatrix();
+}
+
+function bodyStart() {
+  if (!BODY || bodyRunning) return;
+  bodyRunning = true;
+  const loop = () => {
+    if (!bodyRunning) return;
+    if (bodyAnim) {
+      const k = Math.min(1, (performance.now() - bodyAnim.t0) / bodyAnim.ms), e = 1 - Math.pow(1 - k, 3);
+      BODY.camera.position.lerpVectors(bodyAnim.p0, bodyAnim.p1, e);
+      BODY.controls.target.lerpVectors(bodyAnim.c0, bodyAnim.c1, e);
+      if (k >= 1) bodyAnim = null;
+    }
+    BODY.controls.update();
+    BODY.renderer.render(BODY.scene, BODY.camera);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+function bodyStop() { bodyRunning = false; }
+
+function bodyFly(pos, target, ms = 700) {
+  bodyAnim = { t0: performance.now(), ms, p0: BODY.camera.position.clone(), p1: pos, c0: BODY.controls.target.clone(), c1: target };
+}
+
+// Preset views: rotate around the body's vertical axis
+function bodyView(dir) {
+  if (!BODY) return;
+  const T = window.THREE, d = 4.2;
+  const v = { front: [0, 0, 1], back: [0, 0, -1], left: [1, 0, 0], right: [-1, 0, 0] }[dir];
+  bodySelect(null);
+  bodyFly(new T.Vector3(v[0] * d, 1.0, v[2] * d), new T.Vector3(0, 0.95, 0));
+}
+function bodyReset() { if (!BODY) return; bodySelect(null); bodyFly(BODY.home.pos.clone(), BODY.home.target.clone()); }
+function bodyToggleRotate() {
+  if (!BODY) return;
+  BODY.controls.autoRotate = !BODY.controls.autoRotate;
+  document.getElementById('bodyRotBtn').classList.toggle('active', BODY.controls.autoRotate);
+}
+function bodyToggleLayer(k) {
+  bodyLayers[k] = !bodyLayers[k];
+  document.querySelectorAll('[data-blayer]').forEach(b => b.classList.toggle('active', bodyLayers[b.dataset.blayer]));
+  bodyApplyLayers();
+}
+
+// Visibility + focus: the selected structure stays solid, everything else fades so deep parts can be seen
+function bodyApplyLayers() {
+  if (!BODY) return;
+  const col = bodyColors();
+  BODY.meshes.forEach(me => {
+    const u = me.userData, isSel = bodySel && u.id === bodySel.id && u.side === bodySel.side;
+    me.visible = bodyLayers[u.type] || isSel;
+    me.material.color.setHex(col[u.type]);
+    me.material.emissive.setHex(isSel ? col.sel : 0x000000);
+    me.material.emissiveIntensity = isSel ? 0.45 : 0;
+    me.material.opacity = !bodySel || isSel ? 1 : (u.type === 'muscle' ? 0.18 : 0.45);
+    me.material.depthWrite = !bodySel || isSel;
+  });
+  BODY.baseMat.color.setHex(col.base);
+}
+
+function bodySelect(id, side) {
+  bodySel = id ? { id, side: side || (getBodyPart(id).side === 'mid' ? 'mid' : 'left') } : null;
+  bodyApplyLayers();
+  renderBodyInfo();
+  document.querySelectorAll('#bodyList [data-part]').forEach(b => b.classList.toggle('active', !!bodySel && b.dataset.part === bodySel.id));
+  if (!BODY || !bodySel) return;
+  // Zoom: look at the structure from the outside of the body
+  const T = window.THREE, box = new T.Box3();
+  BODY.meshes.forEach(me => { if (me.userData.id === bodySel.id && me.userData.side === bodySel.side) box.expandByObject(me); });
+  const sph = box.getBoundingSphere(new T.Sphere()), c = sph.center;
+  // Look at it from outside: direction from the nearest bone/body axis out to the structure
+  let best = null;
+  bodyAxes().forEach(([a, b]) => {
+    const A = new T.Vector3(...a), ab = new T.Vector3(...b).sub(A);
+    const t = Math.max(0, Math.min(1, c.clone().sub(A).dot(ab) / ab.lengthSq()));
+    const q = A.clone().add(ab.multiplyScalar(t)), d = c.distanceTo(q);
+    if (!best || d < best.d) best = { d, q };
+  });
+  const part = getBodyPart(bodySel.id);
+  let dir = c.clone().sub(best.q); dir.y *= 0.3;
+  if (dir.length() < 0.012) dir.set(0, 0, ['upperback', 'lowerback'].includes(part.region) || part.id === 'nuchae' ? -1 : 1);
+  dir.normalize();
+  if (['acl', 'pcl'].includes(part.id)) dir.set(c.x > 0 ? 0.6 : -0.6, 0, 0.8).normalize();
+  const dist = Math.min(1.6, Math.max(0.4, sph.radius * 5));
+  bodyFly(c.clone().add(dir.multiplyScalar(dist)).add(new T.Vector3(0, 0.04, 0)), c.clone());
+  if (BODY.controls.autoRotate) bodyToggleRotate();
+}
+
+function getBodyPart(id) { return BODY_PARTS.find(p => p.id === id); }
+
+// Centre lines of torso and limbs (both sides), used to find which way is "outside" for a structure
+function bodyAxes() {
+  const S = [0.19, 1.43, 0], E = [0.25, 1.15, -0.01], W = [0.29, 0.90, 0.02], H = [0.09, 0.92, 0], K = [0.10, 0.50, 0.01], A = [0.10, 0.08, -0.01];
+  const mir = v => [-v[0], v[1], v[2]];
+  const limbs = [[S, E], [E, W], [H, K], [K, A]];
+  return [[[0, 0.85, 0], [0, 1.72, 0]], ...limbs, ...limbs.map(([a, b]) => [mir(a), mir(b)])];
+}
+
+const BODY_TYPE_LABEL = { muscle: 'Muscle', tendon: 'Tendon', ligament: 'Ligament' };
+
+function renderBodyInfo() {
+  const box = document.getElementById('bodyInfo'); if (!box) return;
+  if (!bodySel) { box.innerHTML = `<div class="field-help">${tr('Tap a muscle, tendon or ligament on the model, or pick one from the list below.')}</div>`; return; }
+  const p = getBodyPart(bodySel.id), g = p.group ? BODY_GROUPS[p.group] : null, r = BODY_REGIONS[p.region];
+  const sideTxt = { left: tr('Left side'), right: tr('Right side'), mid: tr('Midline') }[bodySel.side];
+  const names = n => `<div class="anat-names" data-noi18n><div><span class="anat-lang">LA</span> <i>${escHtml(n.la)}</i></div><div><span class="anat-lang">NO</span> ${escHtml(n.no)}</div><div><span class="anat-lang">EN</span> ${escHtml(n.en)}</div></div>`;
+  box.innerHTML = `<div class="anat-type">${tr(BODY_TYPE_LABEL[p.type])} · ${sideTxt}</div>${names(p)}
+    ${g ? `<div class="anat-sub">${tr('Part of muscle group')}</div>${names(g)}` : ''}
+    <div class="anat-sub">${tr('Region')}</div>${names(r)}
+    <div class="field-help" style="margin-top:10px">${tr('Function, common complaints, causes and treatment come in the next version.')}</div>
+    <div class="form-actions" style="margin-top:8px"><button class="pip-btn sm" onclick="bodyReset()">${tr('Zoom out')}</button></div>`;
+}
+
+let bodyFilter = '';
+function renderBodyList() {
+  const el = document.getElementById('bodyList'); if (!el) return;
+  const q = bodyFilter.trim().toLowerCase();
+  const html = Object.entries(BODY_REGIONS).map(([rid, r]) => {
+    const parts = BODY_PARTS.filter(p => p.region === rid && (!q || [p.la, p.no, p.en].some(s => s.toLowerCase().includes(q))));
+    if (!parts.length) return '';
+    return `<div class="cal-agenda-day" data-noi18n>${escHtml(r.no)} · ${escHtml(r.en)}</div><div class="anat-list">` +
+      parts.map(p => `<button class="ex txt anat-item ${bodySel && bodySel.id === p.id ? 'active' : ''}" data-part="${p.id}" onclick="bodyPick('${p.id}')" data-noi18n>
+        <span class="anat-dot t-${p.type}"></span><i>${escHtml(p.la)}</i> <span class="lec-meta">· ${escHtml(p.no)} · ${escHtml(p.en)}</span></button>`).join('') + '</div>';
+  }).join('');
+  el.innerHTML = html || `<div class="empty-state">${tr('NO MATCHES')}</div>`;
+}
+function bodyPick(id) {
+  bodySelect(id);
+  document.getElementById('bodyStage').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function setBodyFilter(v) { bodyFilter = v; renderBodyList(); }
+
 // ==================== GOAL OF THE DAY ====================
 function saveGoal() {
   const text = document.getElementById('goalText').value.trim();
@@ -3343,6 +3802,7 @@ function switchSection(sec, sub) {
   document.querySelectorAll('.pip-tab').forEach(t=>t.classList.toggle('active', t.dataset.section===sec));
   document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active', s.id==='section-'+sec));
   if (sec === 'map' && !osloMap) initMap();
+  if (sec === 'body') { renderBodyList(); renderBodyInfo(); if (BODY) { bodyStart(); setTimeout(bodyResize, 50); } else initBody(); } else bodyStop();
   if (sec === 'calendar') { calSel = calSel || todayStr(); }
   render();
 }
@@ -3367,6 +3827,7 @@ function applyTheme(theme) {
 function toggleTheme() {
   const next = document.body.dataset.theme==='fallout' ? 'standard' : 'fallout';
   applyTheme(next); lsSet(THEME_KEY, next);
+  bodyApplyLayers();
   applyMapVariant();
 }
 
