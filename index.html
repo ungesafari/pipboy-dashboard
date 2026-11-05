@@ -1187,7 +1187,14 @@
   <!-- ==================== MAP ==================== -->
   <div class="section" id="section-map">
     <div class="panel">
-      <div class="panel-title">// Oslo Task Map</div>
+      <div class="panel-title">// Map</div>
+      <div class="cal-toolbar" id="mapLevels">
+        <button class="range-btn active" data-level="oslo" onclick="setMapLevel('oslo')">Oslo</button>
+        <button class="range-btn" data-level="norway" onclick="setMapLevel('norway')">Norway</button>
+        <button class="range-btn" data-level="scandinavia" onclick="setMapLevel('scandinavia')">Scandinavia</button>
+        <button class="range-btn" data-level="europe" onclick="setMapLevel('europe')">Europe</button>
+        <button class="range-btn" data-level="world" onclick="setMapLevel('world')">World</button>
+      </div>
       <div class="map-controls">
         <div class="input-group">
           <label>Map Style</label>
@@ -2355,7 +2362,7 @@ const I18N = [
   ["You're already here – no trip.", 'Du er allerede her – ingen reise.'], ['No route found.', 'Fant ingen rute.'],
   ['No transit connection – walk or bike.', 'Ingen kollektivforbindelse – gå eller sykle.'],
   // Map
-  ['// Oslo Task Map', '// Oslo-kart'], ['Map Style', 'Kartstil'], ['Auto (follow theme)', 'Auto (følg tema)'], ['Map Brightness', 'Kartlysstyrke'], ['Reset', 'Tilbakestill'],
+  ['// Map', '// Kart'], ['Norway', 'Norge'], ['Scandinavia', 'Skandinavia'], ['Europe', 'Europa'], ['World', 'Verden'], ['Map Style', 'Kartstil'], ['Auto (follow theme)', 'Auto (følg tema)'], ['Map Brightness', 'Kartlysstyrke'], ['Reset', 'Tilbakestill'],
   ['Road colours', 'Veifarger'], ['Motorway', 'Motorvei'], ['Car road', 'Bilvei'], ['Bike path', 'Sykkelvei'], ['Footpath', 'Gangvei'], ['Trail', 'Sti'], ['Coastline', 'Kystlinje'],
   ['Active tasks', 'Aktive'], ['Finished tasks', 'Ferdig'], ['Address / place', 'Adresse / sted'], ['Saved place', 'Lagret sted'],
   ['// Map API Key Required', '// Kart-API-nøkkel trengs'], ['This map uses MapTiler vector tiles for street-level detail. Get a free API key (100k loads/mo) and paste it below.', 'Kartet bruker MapTiler for detaljerte gatekart. Lag en gratis API-nøkkel (100 000 visninger/mnd) og lim den inn under.'],
@@ -4223,6 +4230,7 @@ const MAP_PALETTES = {
     foot: '#FDF6E2', footOp: 0.45, trail: '#FDF6E2', trailOp: 0.35, bike: '#0055FF', bikeOp: 0.75,
     rail: '#14fe17', railOp: 0.15,
     label: '#14fe17', halo: '#0a0a0a', roadLabelOp: 0.4, placeLabelOp: 0.6,
+    border: '#14fe17', borderOp: 0.55,
   },
   standard: {
     bg: '#f5f3ef', water: '#aadaff', glow: null, shore: '#8cc4ee',
@@ -4235,6 +4243,7 @@ const MAP_PALETTES = {
     foot: '#c9a227', footOp: 0.85, trail: '#b8901d', trailOp: 0.75, bike: '#1a73e8', bikeOp: 0.85,
     rail: '#9e9a94', railOp: 0.7,
     label: '#5f6368', halo: '#ffffff', roadLabelOp: 0.9, placeLabelOp: 0.95,
+    border: '#8a7f92', borderOp: 0.9,
   },
 };
 
@@ -4318,6 +4327,8 @@ function buildMapStyle(key, variant) {
   const P = mapPalette(MAP_PALETTES[variant] ? variant : 'fallout');
   const T = { source: S_NAME, 'source-layer': 'transportation' };
   const upper = variant === 'fallout' ? 'uppercase' : 'none';
+  // Norwegian names where they exist, so far-away places are not shown in a script you can't read
+  const placeName = ['coalesce', ['get', 'name:nb'], ['get', 'name:no'], ['get', 'name_en'], ['get', 'name']];
   const layers = [
     // ---- Background ----
     { id: 'bg', type: 'background', paint: { 'background-color': P.bg } },
@@ -4407,16 +4418,28 @@ function buildMapStyle(key, variant) {
     { id: 'rail', type: 'line', ...T, filter: ['==', 'class', 'rail'], minzoom: 11,
       paint: { 'line-color': P.rail, 'line-width': 1, 'line-opacity': P.railOp, 'line-dasharray': [4, 4] } },
 
+    // ---- COUNTRY BORDERS (land only) ----
+    { id: 'country-border', type: 'line', source: S_NAME, 'source-layer': 'boundary',
+      filter: ['all', ['==', 'admin_level', 2], ['!=', 'maritime', 1]],
+      paint: { 'line-color': P.border, 'line-opacity': P.borderOp, 'line-width': ['interpolate',['linear'],['zoom'],1,0.5,6,1.2,12,2] } },
+
     // ---- LABELS ----
     { id: 'road-label', type: 'symbol', source: S_NAME, 'source-layer': 'transportation_name', minzoom: 14,
       layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 10,
         'symbol-placement': 'line', 'text-max-angle': 30, 'text-transform': upper },
       paint: { 'text-color': P.label, 'text-opacity': P.roadLabelOp, 'text-halo-color': P.halo, 'text-halo-width': 1.5 } },
     { id: 'place-label', type: 'symbol', source: S_NAME, 'source-layer': 'place',
-      layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'],
-        'text-size': ['interpolate',['linear'],['zoom'],10,11,16,16], 'text-transform': upper,
+      filter: ['!in', 'class', 'continent', 'country'],
+      layout: { 'text-field': placeName, 'text-font': ['Noto Sans Bold'],
+        'text-size': ['interpolate',['linear'],['zoom'],4,9,10,11,16,16], 'text-transform': upper,
         'text-letter-spacing': 0.1 },
-      paint: { 'text-color': P.label, 'text-opacity': P.placeLabelOp, 'text-halo-color': P.halo, 'text-halo-width': 2 } }
+      paint: { 'text-color': P.label, 'text-opacity': P.placeLabelOp, 'text-halo-color': P.halo, 'text-halo-width': 2 } },
+    { id: 'country-label', type: 'symbol', source: S_NAME, 'source-layer': 'place',
+      filter: ['==', 'class', 'country'], maxzoom: 8,
+      layout: { 'text-field': placeName, 'text-font': ['Noto Sans Bold'],
+        'text-size': ['interpolate',['linear'],['zoom'],1,10,6,15], 'text-transform': upper,
+        'text-letter-spacing': 0.1 },
+      paint: { 'text-color': P.label, 'text-opacity': 1, 'text-halo-color': P.halo, 'text-halo-width': 2 } }
   );
 
   return {
@@ -4425,6 +4448,27 @@ function buildMapStyle(key, variant) {
     glyphs: 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=' + key,
     layers,
   };
+}
+
+// Map levels: Oslo keeps its start view; the others fit the area to any screen size
+const MAP_LEVELS = {
+  oslo: { center: [10.755, 59.922], zoom: 13 },
+  norway: { bounds: [[4, 57.8], [31.5, 71.4]] },
+  scandinavia: { bounds: [[4, 54.4], [31.6, 71.4]] },
+  europe: { bounds: [[-25, 34], [45, 71.5]] },
+  world: { bounds: [[-170, -58], [180, 78]] },
+};
+
+function markMapLevel(level) {
+  document.querySelectorAll('#mapLevels [data-level]').forEach(b => b.classList.toggle('active', b.dataset.level === level));
+}
+
+function setMapLevel(level) {
+  if (!osloMap) return;   // the key prompt is already showing
+  const L = MAP_LEVELS[level];
+  markMapLevel(level);
+  if (L.bounds) osloMap.fitBounds(L.bounds, { padding: 20, duration: 1200 });
+  else osloMap.flyTo({ center: L.center, zoom: L.zoom, duration: 1200 });
 }
 
 function initMap() {
@@ -4444,6 +4488,8 @@ function initMap() {
       attributionControl: true,
     });
     osloMap.addControl(new maplibregl.NavigationControl(), 'top-left');
+    // Moving the map yourself means no level button applies any more
+    osloMap.on('movestart', e => { if (e.originalEvent) markMapLevel(''); });
   } catch(e) {
     console.error('Map init failed', e);
     toast('MAP FAILED TO LOAD — CHECK API KEY');

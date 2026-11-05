@@ -106,6 +106,7 @@ Three levels via `data-brightness="dark|medium|light"` on `<body>` (both themes)
 ### Map Specifics
 - MapLibre GL JS with MapTiler vector tiles (OpenMapTiles schema); key prompt on first use (`pipboy_maptiler_key`, also synced in settings)
 - Road color coding: red highways, orange car roads, blue bike paths, yellow pedestrian paths (dashed trails). Can be switched off ("Veifarger" → `ROAD_PLAIN`, `pipboy_map_roadcolors`)
+- Level buttons Oslo / Norway / Scandinavia / Europe / World (`MAP_LEVELS`, `setMapLevel`): fitBounds so each level suits any screen; moving the map by hand clears the active button. Country borders (`boundary`, admin_level 2) and country labels are style layers; place names prefer Norwegian via `coalesce`
 - Map styles from `MAP_PALETTES` (`fallout` / `standard`), Auto follows theme (`pipboy_map_style`); brightness slider 40–160% (`pipboy_map_brightness`)
 - Task markers with priority-based colors and popups; address/place markers are square; saved places shown as ★ (home ⌂)
 
