@@ -59,6 +59,17 @@ Published with GitHub Pages so it can be opened from both phone and laptop. **Fa
 - Selecting fades everything else (so deep structures like the cruciate ligaments are visible) and flies the camera to the structure from outside its nearest limb/torso axis (`bodyAxes`)
 - Planned next (not built yet): function text per group and the 3 most common complaints per region (for a fit, non-overweight person who sits at a desk), with causes and treatment — attach to `BODY_REGIONS` / `BODY_GROUPS`
 
+### Map facts (clickable areas)
+- Chips "Tap on: Country / County / Municipality / City district" (`geoMode`) set the level of detail. Levels follow `GEO_LEVEL_MODE`, and zooming by hand changes the mode. A click takes the finest hit at or above the mode, so outside the four cities a district click gives the municipality, and outside Norway it gives the country
+- Borders are TopoJSON from jsDelivr, loaded on demand (`geoLoad`): world-atlas for countries, AnalyseABO/Kart-fylker-og-kommuner-json (pinned to a commit) for Norway. Custom layers are added in `geoAddLayers`; `setStyle` must use `{ diff: false }` or `style.load` does not fire and they vanish
+- Districts exist for Oslo, Bergen, Stavanger and Trondheim. SSB uses `030105a`-style codes for Oslo (`ssbCode`)
+- Figures, fetched per click and cached in `GEO.cache`. **Every figure shows its own year**:
+  - Countries: Data360 (`wbLatest`) for population, GDP, exports, imports and sector shares. **Do not use `api.worldbank.org/v2/.../indicator` from the browser**: most of its servers omit the CORS header. `/v2/country/ISO` is fine. Avoid its JSONP, it would run remote script next to the stored tokens
+  - Top exports: Harvard Atlas GraphQL (HS92 chapters + services, Norwegian names in `PRODUCT_NO`); Norway uses SSB 08809 (goods, SITC)
+  - Income sources: three World Bank sectors; Norway gets SSB 09170 (value added by industry)
+  - County/municipality/district: SSB 10987 population, 06944 median income, 07984 jobs by industry, 13540 municipal income, 09434 education
+- UN Comtrade has no CORS, so it can't be called from the page
+
 ### Header & display controls
 - Top-left fixed controls (always visible): theme toggle, brightness (Dark/Med/Light), language (NO/EN)
 - Header shows Oslo clock + localized date on the left; sync status badge on the right
@@ -120,5 +131,5 @@ Three levels via `data-brightness="dark|medium|light"` on `<body>` (both themes)
 ## Important Constraints
 - Must remain a SINGLE file (no separate CSS/JS)
 - Must work from GitHub Pages and from `file://` (Google Calendar only from https)
-- External resources: CDN links (MapLibre, font), Google Identity Services script, and public APIs: MapTiler, Entur, Open-Meteo, OSM Nominatim, GitHub API (gist sync), Google Calendar API
+- External resources: CDN links (MapLibre, font, Three.js, topojson-client, border files), Google Identity Services script, flagcdn images, and public APIs: MapTiler, Entur, Open-Meteo, OSM Nominatim, GitHub API (gist sync), Google Calendar API, World Bank (Data360, country metadata), Harvard Atlas, SSB
 - No cookies, no server-side anything
